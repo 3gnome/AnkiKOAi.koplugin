@@ -4,6 +4,22 @@ KOReader plugin: long-press a word or highlight a passage while reading → AI v
 
 Works on Kobo, Kindle (with KOReader), and the KOReader desktop emulator.
 
+Unlike manually exporting highlights, AnkiKOAi builds finished, formatted cards (AI articles, dictionary definitions, or memorization steps) and sends them straight to Anki over your Wi‑Fi — no cables, no copy‑paste.
+
+## Demo
+
+<!--
+  Drop your images/GIF into docs/images/ with these exact names and they will render here.
+  A short GIF of: long-press/highlight → AnkiKOAi menu → card preview → card in Anki
+  is the single best thing for sharing on Reddit, MobileRead, and forums.
+-->
+
+![AnkiKOAi: highlight to Anki card demo](docs/images/demo.gif)
+
+| Highlight → menu | Card preview | In Anki |
+|---|---|---|
+| ![Highlight menu](docs/images/highlight-menu.png) | ![Card preview](docs/images/card-preview.png) | ![Card in Anki](docs/images/anki-card.png) |
+
 ## Features
 
 - **Wiki Card (AI)** — Wikipedia/Wiktionary + AI turn a highlight into a reading note (term on front, article + Wikipedia links on back)
@@ -35,6 +51,7 @@ Works on Kobo, Kindle (with KOReader), and the KOReader desktop emulator.
 | [Desktop copy-paste templates](docs/desktop/) | Front/back HTML + CSS for all three note types |
 | [anki-memorization-setup.txt](anki-memorization-setup.txt) | Memorization templates (same as `docs/desktop/memorization-anki-templates.txt`) |
 | [Publishing & discoverability](docs/publishing.md) | GitHub, releases, KOReader AppStore, SEO |
+| [Announcement posts](docs/announcements.md) | Ready-to-paste posts for MobileRead, Reddit, Anki forums |
 
 On your e-reader, tap **View README** in each card submenu for what that card type does (fields, decks, settings). Copy Anki templates and CSS on your computer from [docs/desktop/](docs/desktop/) — not from the e-reader screen.
 
