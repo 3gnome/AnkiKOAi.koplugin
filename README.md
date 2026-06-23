@@ -18,6 +18,14 @@ The card lands in desktop Anki, ready to study:
 
 ![The finished card in desktop Anki](docs/images/anki-card.png)
 
+### Wiki Card (AI)
+
+The AI **Wiki Card** turns a highlight into a reading note: a written-up article plus "Explore further" Wikipedia links, with the source citation. On the device, then synced to Anki:
+
+| On the device | In Anki |
+|---|---|
+| ![AI Wiki Card preview on the device](docs/images/wiki-card-preview.png) | ![AI Wiki Card with article and explore links in Anki](docs/images/wiki-card-anki.png) |
+
 ### Memorization (poetry & prose)
 
 Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step cards plus a full-recitation card:
