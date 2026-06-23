@@ -1,0 +1,25 @@
+# Local config with API keys and LAN URLs (use configuration.lua.sample as template)
+configuration.lua
+
+# Plugin runtime data (stored on device under KOReader settings)
+*_cards.json
+*_settings.json
+
+# Dev / emulator logs
+koreader.log
+*.log
+
+# KOReader per-book sidecar metadata (created when opening a test book)
+*.sdr/
+
+# Local test book
+alice.epub
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~

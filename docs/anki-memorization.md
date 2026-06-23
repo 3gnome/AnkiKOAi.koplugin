@@ -1,0 +1,321 @@
+# Anki: Memorization deck
+
+> **On your e-reader:** Tap **View README** in the Memorization submenu for a short summary (`docs/in-app/memorization.md`).  
+> **Copy-paste on your computer:** Line/Full templates and CSS are in **`docs/desktop/memorization-anki-templates.txt`** (same as `anki-memorization-setup.txt` at the plugin root) — open in any text editor and paste into Anki’s note-type editor.
+
+LPCG-style verbatim memorization: overlapping **step** cards (recite the next line/chunk) plus an optional **full recitation** card per passage.
+
+Highlight menu action: **Memorization**
+
+Note type name must be exactly: **Memorization**
+
+---
+
+## 1. Create the note type
+
+1. **Tools → Manage Note Types → Add → Add: Basic**
+2. Rename to: **Memorization**
+3. **Fields** — delete Front/Back, add in order:
+
+   | Field | Purpose |
+   |-------|---------|
+   | Title | Passage title (book + location) |
+   | Context | Prior lines shown as cue |
+   | Target | Line/chunk to recite |
+   | FullText | Complete passage (full card back) |
+   | Source | Book citation |
+   | LineIndex | Step number (plugin-managed) |
+   | FullRecite | Non-empty on full-recitation notes only |
+
+4. **Cards** — create **two** card types:
+
+   | Card type | Purpose |
+   |-----------|---------|
+   | **Line** | Daily step cards (tag `memorization::step`) |
+   | **Full** | Weekly whole-passage recitation (tag `memorization::full`) |
+
+---
+
+## 2. Line card — front template
+
+```html
+{{#Target}}
+<div class="poem-card poem-card--line">
+  {{#Context}}<div class="context">{{Context}}</div>{{/Context}}
+  {{^Context}}<div class="context context--hint">Beginning of piece</div>{{/Context}}
+  <div class="prompt">Recite the next part aloud.</div>
+  <div class="title-ref">{{Title}}</div>
+</div>
+{{/Target}}
+```
+
+## 3. Line card — back template
+
+```html
+{{#Target}}
+<div class="answer">{{Target}}</div>
+{{type:Target}}
+<div class="source">{{Source}}</div>
+{{/Target}}
+```
+
+Remove the `{{type:Target}}` line if you do not want typing checks.
+
+## 4. Full card — front template
+
+```html
+{{#FullRecite}}
+<div class="poem-card poem-card--full">
+  <div class="prompt">Recite from memory:</div>
+  <div class="title">{{Title}}</div>
+</div>
+{{/FullRecite}}
+```
+
+## 5. Full card — back template
+
+```html
+{{#FullRecite}}
+<div class="full-text">{{FullText}}</div>
+<div class="source">{{Source}}</div>
+{{/FullRecite}}
+```
+
+---
+
+## 6. Styling
+
+Paste into **Cards → Styling** (both card types share this):
+
+```css
+.card {
+  --bg: #f6f3ec;
+  --paper: #fffdf8;
+  --ink: #1a1816;
+  --muted: #6f6a62;
+  --hairline: #e3ddd2;
+  --accent: #7a5b24;
+  font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.card.nightMode {
+  --bg: #101214;
+  --paper: #171a1d;
+  --ink: #eceff2;
+  --muted: #a3a9af;
+  --hairline: #2a3036;
+  --accent: #d4b06a;
+}
+
+.poem-card {
+  max-width: 680px;
+  margin: 20px auto;
+  padding: 28px 24px;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+}
+
+.poem-card--line .context {
+  white-space: pre-line;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+
+.context--hint {
+  font-style: normal;
+  font-size: 0.9em;
+}
+
+.prompt {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.title-ref, .poem-card--full .title {
+  font-size: 1.05em;
+  color: var(--accent);
+}
+
+.answer, .full-text {
+  white-space: pre-line;
+  font-size: 1.15em;
+  line-height: 1.75;
+}
+
+.poem-card--full {
+  text-align: center;
+  padding: 36px 24px;
+}
+
+.poem-card--full .title {
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.source {
+  margin-top: 16px;
+  font-size: 0.88em;
+  color: var(--muted);
+}
+
+.typeGood { color: #2d6a2d; }
+.typeBad  { color: #9b2c2c; }
+.typeMissed { color: #9b2c2c; }
+```
+
+---
+
+## 7. Deck hierarchy
+
+1. Create parent deck: **Memorize**
+2. The plugin auto-creates subdecks per highlight:
+
+   ```
+   Memorize::Alice's Adventures in Wonderland::p. 16
+   ```
+
+   Book title is the middle level; the leaf is page/chapter only (not repeated).
+
+3. In plugin Settings → **Memorization**, set **Parent deck** to `Memorize`.
+
+---
+
+## 8. Deck options (Memorize preset)
+
+**Decks → ⚙ → Options → Save as preset → "Memorize"**
+
+Apply to **Memorize** and use **Save to all subdecks** when you add new passages.
+
+### Quick reference
+
+| Setting | Value |
+|---------|-------|
+| New cards/day | 10 |
+| Maximum reviews/day | 100 |
+| Learning steps (FSRS on) | `1m 10m` |
+| Learning steps (FSRS off) | `1m 10m 1d` |
+| Relearning steps (FSRS on) | `10m` |
+| Relearning steps (FSRS off) | `10m 1d` |
+| New card gather order | Deck order |
+| New card sort order | Order gathered |
+| Review sort order | Due date, then random |
+| Bury interday learning siblings | On |
+| Bury review siblings | Off |
+| Leech threshold | 8 |
+| Leech action | Tag only |
+| FSRS desired retention | 90% |
+
+### Key ideas
+
+- **10 new/day** — a 10-step passage ≈ 11 cards with full card; prevents overload.
+- **100 reviews/day** — verbatim recitation takes longer than vocab.
+- **No `1d` learning step with FSRS** — FSRS schedules long intervals; same-day steps only.
+- **Review sort random** — do not force strict 1→2→3 order; fluency comes from aloud practice, not queue order.
+
+For a field-by-field explanation of every deck option, see [anki-memorization-setup.txt](../anki-memorization-setup.txt) Part 7.
+
+---
+
+## 9. Filtered deck (weekly full recitation)
+
+Step cards belong in daily study. Full cards (`memorization::full`) work best 1–2× per week.
+
+### Create once
+
+1. **Tools → Create Deck** → name: `Memorize :: Full recitation (weekly)`
+2. Open the deck → **Options** (gear)
+3. Set filter: **Show only cards with tag** `memorization::full`
+4. Optional limits: 20 new/day, 50 reviews/day
+
+### Weekly routine
+
+| When | What |
+|------|------|
+| Mon–Sat | Study the passage subdeck (step cards) |
+| 1–2×/week | Study **Memorize :: Full recitation (weekly)** — recite aloud, grade honestly |
+
+Browse search: `tag:memorization::full`
+
+---
+
+## 10. Plugin settings (Memorization)
+
+**Settings → Memorization** (or `configuration.lua` → `memorize`):
+
+| Setting | Default | Tuning |
+|---------|---------|--------|
+| Context lines | 3 | 4 for poetry; 2–3 for prose |
+| Max words per chunk | 7 | 6–8 for prose paragraphs |
+| Full recitation card | ON | OFF to skip full card |
+| Parent deck | Memorize | Must match Anki |
+| Note type | Memorization | Must match Anki |
+
+**How text is split:**
+
+- **Poetry** (≥2 line breaks in selection): one unit per line; long lines split by word count.
+- **Prose**: split by sentences, then by word chunks if sentences are long.
+
+Duplicate warning: if the same book + page deck already has cards, the plugin warns before sending again.
+
+```lua
+memorize = {
+    parent_deck             = "Memorize",
+    model                   = "Memorization",
+    context_lines           = 3,
+    max_words_per_unit      = 7,
+    auto_create_deck        = true,
+    include_full_recitation = true,
+    tags                    = { "KOReader", "memorization" },
+},
+```
+
+Tags added automatically:
+
+- `memorization::step` — each chunk/line card
+- `memorization::full` — whole passage card
+
+---
+
+## 11. Study routine (most effective)
+
+**Before Anki (day 1):**
+
+1. Read the passage once
+2. Chain aloud: line 1 → lines 1–2 → … up to ~6 lines
+3. Sleep
+4. Full recitation aloud; fix weak spots only
+
+**Daily (Anki):**
+
+1. Review step cards in the passage subdeck
+2. End with **one** full recitation aloud without looking
+3. Grade the Full card based on that run-through
+
+Inspired by [AnkiLPCG](https://ankilpcg.readthedocs.io/).
+
+---
+
+## Copy-paste reference
+
+All templates and extended deck-option notes in one file:
+
+- **`docs/desktop/memorization-anki-templates.txt`** (also **`anki-memorization-setup.txt`** at plugin root)
+
+Wiki and Vocabulary Card templates:
+
+- **`docs/desktop/wiki-card-anki-templates.txt`**
+- **`docs/desktop/vocabulary-card-anki-templates.txt`**
+
+Formatted guides: [Anki: Wiki Card setup](anki-vocabulary.md), [Vocabulary Card](anki-vocabulary-card.md)

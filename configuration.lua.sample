@@ -1,0 +1,52 @@
+local CONFIGURATION = {
+    -- DashScope (Qwen) — default AI provider.
+    -- Get your key at: https://dashscope-intl.console.aliyun.com/
+    dashscope_api_key = "YOUR_DASHSCOPE_API_KEY",
+    provider          = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+    model             = "qwen-plus",
+
+    -- ── Gemini (Google) ───────────────────────────────────────────────────
+    -- Get your key at: https://aistudio.google.com/apikey
+    gemini_api_key = "YOUR_GEMINI_API_KEY",
+
+    -- ── OpenAI ─────────────────────────────────────────────────────────────
+    -- Get your key at: https://platform.openai.com/api-keys
+    openai_api_key = "YOUR_OPENAI_API_KEY",
+
+    -- ── OpenRouter — access to hundreds of models via one API key ─────────
+    -- Get your key at: https://openrouter.ai/keys
+    openrouter_api_key = "YOUR_OPENROUTER_API_KEY",
+    openrouter_model   = "anthropic/claude-3-haiku",
+
+    -- ── Target language ────────────────────────────────────────────────────
+    target_language = "English",
+
+    -- ── AI provider ───────────────────────────────────────────────────────
+    -- Options: "dashscope", "gemini", "openai", "openrouter"
+    text_provider = "dashscope",
+
+    -- ── Anki integration ────────────────────────────────────────────────────
+    -- AnkiConnect on the same Wi‑Fi as your e-reader. Use your PC's LAN IP, not localhost.
+    anki = {
+        url   = "http://192.168.1.100:8765",
+        deck  = "English::Koreader",
+        wiki_note_type = "Wiki Card",
+        model = "Wiki Card",
+        vocabulary_model = "Vocabulary Card",
+        tags  = { "KOReader" },
+        sync_after_send = true,
+    },
+
+    -- Memorization (LPCG-style step cards + full recitation).
+    memorize = {
+        parent_deck             = "Memorize",
+        model                   = "Memorization",
+        context_lines           = 3,
+        max_words_per_unit      = 7,
+        auto_create_deck        = true,
+        include_full_recitation = true,
+        tags                    = { "KOReader", "memorization" },
+    },
+}
+
+return CONFIGURATION

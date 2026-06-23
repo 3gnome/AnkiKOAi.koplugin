@@ -1,0 +1,611 @@
+================================================================================
+ANKI MEMORIZATION SETUP — copy/paste reference for AnkiKOAi
+================================================================================
+Also saved as:  docs/desktop/memorization-anki-templates.txt  (same content)
+Formatted guide: docs/anki-memorization.md  |  Wiki Card: docs/anki-vocabulary.md
+On e-reader (View README): docs/in-app/memorization.md
+
+Open this file in any text editor on your computer to copy templates into Anki.
+
+Note type name must be exactly:  Memorization
+Plugin menu label:             Memorization Card (No AI, Multi-Line)
+
+================================================================================
+PART 1 — CREATE NOTE TYPE
+================================================================================
+Tools → Manage Note Types → Add → Add: Basic
+Rename to: Memorization
+
+Fields (delete Front/Back, add in this order):
+  Title
+  Context
+  Target
+  FullText
+  Source
+  LineIndex
+  FullRecite
+
+Cards → create TWO card types named:
+  Line   (step cards)
+  Full   (whole-passage recitation)
+
+================================================================================
+PART 2 — CARD "Line" — FRONT TEMPLATE
+(paste into Cards → Line → Front Template)
+================================================================================
+
+{{#Target}}
+<div class="poem-card poem-card--line">
+  {{#Title}}<div class="piece-title">{{Title}}</div>{{/Title}}
+  {{#Context}}<div class="context">{{Context}}</div>{{/Context}}
+  {{^Context}}<div class="context context--hint">— beginning of the piece —</div>{{/Context}}
+  <div class="cue">&#9656; recite the next line aloud</div>
+</div>
+{{/Target}}
+
+
+================================================================================
+PART 3 — CARD "Line" — BACK TEMPLATE
+================================================================================
+
+{{FrontSide}}
+
+<hr class="rule">
+
+{{#Target}}
+<div class="poem-card poem-card--answer">
+  <div class="answer">{{Target}}</div>
+  {{#Source}}<div class="source">{{Source}}</div>{{/Source}}
+</div>
+{{/Target}}
+
+(Optional typing check: add a line {{type:Target}} above the answer div.)
+
+
+================================================================================
+PART 4 — CARD "Full" — FRONT TEMPLATE
+================================================================================
+
+{{#FullRecite}}
+<div class="poem-card poem-card--full">
+  <div class="cue">recite from memory</div>
+  <div class="piece-title piece-title--big">{{Title}}</div>
+</div>
+{{/FullRecite}}
+
+
+================================================================================
+PART 5 — CARD "Full" — BACK TEMPLATE
+================================================================================
+
+{{#FullRecite}}
+<div class="poem-card poem-card--full-answer">
+  <div class="full-text">{{FullText}}</div>
+  {{#Source}}<div class="source">{{Source}}</div>{{/Source}}
+</div>
+{{/FullRecite}}
+
+
+================================================================================
+PART 6 — STYLING (Cards → Styling tab — both card types share this)
+================================================================================
+
+.card {
+  --bg: #f6f3ec;
+  --paper: #fffdf8;
+  --ink: #1a1816;
+  --muted: #6f6a62;
+  --hairline: #e3ddd2;
+  --accent: #7a5b24;
+  font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.card.nightMode {
+  --bg: #101214;
+  --paper: #171a1d;
+  --ink: #eceff2;
+  --muted: #a3a9af;
+  --hairline: #2a3036;
+  --accent: #d4b06a;
+}
+
+.poem-card {
+  max-width: 680px;
+  margin: 20px auto;
+  padding: 28px 26px;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+}
+
+.piece-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.piece-title--big {
+  font-size: 1.45em;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+}
+
+.poem-card--line .context {
+  white-space: pre-line;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+
+.context--hint {
+  font-style: normal;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.cue {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.rule {
+  border: none;
+  border-top: 1px solid var(--hairline);
+  margin: 18px auto;
+  max-width: 680px;
+}
+
+.answer, .full-text {
+  white-space: pre-line;
+  font-size: 1.18em;
+  line-height: 1.8;
+}
+
+.poem-card--answer {
+  border-color: var(--accent);
+}
+
+.poem-card--full,
+.poem-card--full-answer {
+  text-align: center;
+  padding: 36px 26px;
+}
+
+.poem-card--full-answer .full-text {
+  text-align: left;
+}
+
+.source {
+  margin-top: 16px;
+  font-size: 0.88em;
+  color: var(--muted);
+}
+
+.typeGood { color: #2d6a2d; }
+.typeBad  { color: #9b2c2c; }
+.typeMissed { color: #9b2c2c; }
+
+
+================================================================================
+PART 7 — DECK OPTIONS (full guide)
+Decks → ⚙ next to Memorize (or subdeck) → Options
+Tip: set once → "Save" → use "Save to all subdecks" on parent Memorize deck
+      or save as preset named "Memorize" and apply to new subdecks
+================================================================================
+
+Anki may show slightly different labels depending on version (23 vs 24+).
+If you enabled FSRS (see Advanced below), some SM-2 fields disappear — that
+is normal. Learning steps and daily limits still apply either way.
+
+
+--------------------------------------------------------------------------------
+DAILY LIMITS
+--------------------------------------------------------------------------------
+
+New cards/day
+  What it does: Caps how many brand-new step cards enter learning each day.
+  Memorization: 10 recommended when learning a new passage (8–15 is fine).
+  Why: A 10-step passage ≈ 11 cards with the full card. Prevents overload.
+  Too high: dozens of new chunks at once — hard to chain aloud.
+  Too low: slow start; OK if juggling many pieces.
+
+Maximum reviews/day
+  What it does: Stops review cards after this many, even if more are due.
+  Memorization: 100 (Anki warns if below ~100 when new cards/day is 10).
+  Why: Verbatim cards take longer than vocab — cap prevents marathons.
+  Your screenshot showed 77 — raise to 100 to clear the warning.
+
+New cards ignore review limit (toggle)
+  What it does: New cards can appear even after hitting the review cap.
+  Memorization: OFF (default) — keeps total session size predictable.
+
+Limits start from top (toggle)
+  What it does: Subdeck limits roll up to parent deck first.
+  Memorization: OFF unless you use nested subdecks with shared caps.
+
+Limit applies to subdecks (checkbox, if shown)
+  What it does: Whether the daily limit is shared across child decks.
+  Memorization: OFF — each subdeck (each passage) gets its own allowance.
+  Why: Lets you add a new Alice excerpt without blocking an old poem deck.
+
+
+--------------------------------------------------------------------------------
+NEW CARDS — LEARNING PHASE
+(First time you see each step card)
+--------------------------------------------------------------------------------
+
+Learning steps
+  What it does: Delays before a new card "graduates" to long-term review.
+    Again → restart from first step.
+    Good → advance to next step.
+    Easy → skip ahead (FSRS handles the interval).
+  Format: space-separated, e.g. "1m 10m" or "10m".
+  Memorization WITH FSRS: 1m 10m   ← no "1d" step (Anki warns if 1d+)
+  Memorization WITHOUT FSRS: 1m 10m 1d
+  Why: FSRS schedules long-term intervals itself. A 1d learning step fights FSRS
+       and triggers Anki's yellow warning. Same-day steps only, then Good
+       graduates the card into FSRS review.
+  Recite aloud at each step before pressing Good.
+
+Graduating interval  (hidden if FSRS enabled)
+  What it does: First review interval after the last learning step when you
+                press Good (not Easy).
+  Memorization: 3 days
+  Why: Verbatim needs tighter early reinforcement than default 1 day.
+
+Easy interval  (hidden if FSRS enabled)
+  What it does: Interval if you press Easy during learning (you already know it).
+  Memorization: 7 days
+  Why: Don't jump to weeks on a step you barely know — but Easy means Easy.
+
+Insertion order / New card position (label varies)
+  What it does: Where new cards are mixed into your study queue.
+  Options often include: Sequential, Random, Mix with reviews.
+  Memorization: Sequential (or "Show after reviews" — either is fine).
+  Why: When first importing a passage, sequential keeps early steps together.
+       After day 1, random review order is OK (Display Order below matters more).
+
+
+--------------------------------------------------------------------------------
+LAPSES — RELEARNING PHASE
+(When you press Again on a review card you forgot)
+--------------------------------------------------------------------------------
+
+Relearning steps
+  What it does: Same idea as learning steps, but after a lapse.
+  Memorization WITH FSRS: 10m        ← no "1d" (same warning as above)
+  Memorization WITHOUT FSRS: 10m 1d
+  Why: FSRS will set the next review interval after relearning completes.
+
+New interval  (percentage, SM-2 / some FSRS versions)
+  What it does: After relearning, new interval = old interval × this %.
+  Memorization: 0% (default) or 20% if you want a small penalty only.
+  Why: A missed line in a passage — you want to see it again soon, not wait
+       weeks as if it were mature.
+
+Minimum interval
+  What it does: Floor for interval after a lapse.
+  Memorization: 1 day (default)
+  Why: Fine as default.
+
+
+--------------------------------------------------------------------------------
+REVIEWS — SM-2 ONLY  (hidden when FSRS is on)
+--------------------------------------------------------------------------------
+
+Starting ease
+  What it does: Initial "ease factor" for graduated cards (250% = default).
+  Memorization: 250% (default)
+  Why: No need to change unless cards feel too sparse or too frequent.
+
+Easy bonus
+  What it does: Multiplier when you press Easy on a review.
+  Memorization: 130% (default)
+
+Interval modifier
+  What it does: Scales all review intervals up or down.
+  Memorization: 100% (default). Use 90% if verbatim fades fast for you.
+
+Maximum interval
+  What it does: Cap on days between reviews.
+  Memorization: 36500 days (default) or 365 days if you prefer shorter max.
+
+Hard interval
+  What it does: Multiplier when you press Hard.
+  Memorization: 120% (default)
+
+
+--------------------------------------------------------------------------------
+DISPLAY ORDER
+(How cards are queued — important for memorization)
+--------------------------------------------------------------------------------
+
+New card gather order
+  What it does: Which subdeck's new cards are collected first.
+  Memorization: Deck order (or "Random" if you don't care).
+  Why: Deck order keeps one passage's new cards together when importing.
+
+New card sort order
+  What it does: Order among new cards gathered above.
+  Memorization: Card type order, then Order gathered
+  Why: Step cards (Line) before Full card when both are new — optional.
+       "Order gathered" preserves LineIndex order from the plugin.
+
+New/review order
+  What it does: Mix new cards with due reviews or show one type first.
+  Memorization: Mix with reviews (default) after day 1.
+  Why: SRS should surface weak lines while you're still learning the piece.
+
+Interday learning/review order
+  What it does: Cards in learning from a previous day vs today's reviews.
+  Memorization: Default (reviews first, or mixed — either OK).
+
+Review sort order
+  What it does: Order of due review cards.
+  Memorization: Due date, then random
+  Why: MUST stay random-ish for SRS — do NOT force strict 1→2→3 order.
+       Verbatim fluency comes from your end-of-session full recitation, not
+       ordered Anki queues.
+
+Bury interday learning siblings
+  What it does: Hides other cards of the same note that are in learning until
+                tomorrow if one sibling was answered today.
+  Memorization: ON
+  Why: Each step is a separate note — usually N/A, but harmless ON.
+
+Bury review siblings
+  What it does: Hides other cards from the same note when one is due.
+  Memorization: OFF
+  Why: Line and Full are different notes in our setup — OFF is fine.
+
+
+--------------------------------------------------------------------------------
+ADVANCED / FSRS  (Anki 23.10+ — bottom of deck options)
+--------------------------------------------------------------------------------
+
+Enable FSRS
+  What it does: Replaces SM-2 interval math with FSRS (often better scheduling).
+  Memorization: ON if available (recommended after ~1000 reviews on preset,
+                or use defaults immediately).
+  Why: Better long-term retention prediction. Learning steps still apply.
+
+Desired retention
+  What it does: Target % you remember when a card is due (FSRS only).
+  Memorization: 0.90 (90%)
+  Why: Verbatim decays faster than facts — 90% beats 85% for poetry/prose.
+       Higher = more daily reviews. Don't go below 0.85 for memorization.
+
+Maximum interval (FSRS)
+  What it does: Cap days between reviews.
+  Memorization: 365 days default, or leave max.
+
+Optimize FSRS parameters
+  What it does: Trains FSRS on your review history for this preset.
+  Memorization: Click Optimize after a few weeks of memorization reviews.
+
+
+--------------------------------------------------------------------------------
+AUDIO  (usually irrelevant for Memorization note type)
+--------------------------------------------------------------------------------
+
+Don't play audio automatically
+  What it does: Auto-play {{FrontSide}} audio on back side.
+  Memorization: ON (default) — we have no audio fields.
+
+Skip question when replaying answer
+  What it does: Replays only the answer audio.
+  Memorization: leave default.
+
+
+--------------------------------------------------------------------------------
+TIMERS  (optional)
+--------------------------------------------------------------------------------
+
+Maximum answer seconds
+  What it does: Auto-flags cards you stare at too long.
+  Memorization: 0 (off) or 60 — reciting aloud takes time.
+
+Show on-screen timer
+  Memorization: your preference (off is fine).
+
+
+--------------------------------------------------------------------------------
+AUTO ADVANCE  (optional, Anki 23+)
+--------------------------------------------------------------------------------
+
+Seconds to show question / answer before auto-advance
+  Memorization: leave OFF (0) — you need time to recite aloud.
+
+
+--------------------------------------------------------------------------------
+LEECHES
+--------------------------------------------------------------------------------
+
+Leech threshold
+  What it does: After this many lapses (Again), card is tagged a leech.
+  Memorization: 8
+  Why: Flags the exact line/chunk that breaks your chain — valuable feedback.
+
+Leech action
+  What it does: Suspend leech vs tag only.
+  Memorization: Tag only
+  Why: Don't auto-hide sticky lines — you need to fix them. Tag = find in Browse.
+
+
+--------------------------------------------------------------------------------
+QUICK REFERENCE — values to copy
+--------------------------------------------------------------------------------
+
+New cards/day ...................... 10
+Maximum reviews/day ................ 100
+Learning steps (FSRS on) ........... 1m 10m
+Learning steps (FSRS off) .......... 1m 10m 1d
+Relearning steps (FSRS on) ......... 10m
+Relearning steps (FSRS off) ........ 10m 1d
+New card gather order .............. Deck order
+New card sort order ................ Order gathered
+Review sort order .................. Due date, then random
+Leech threshold .................... 8
+Leech action ....................... Tag only
+Bury interday learning siblings .... On
+Bury review siblings ............... Off
+FSRS desired retention ............. 90%       (if FSRS on)
+
+Everything else: Anki defaults unless you know you need to change it.
+
+
+================================================================================
+PART 8 — FILTERED DECK (weekly full recitation)
+Study step cards daily in the passage subdeck; full recitation 1–2× per week.
+================================================================================
+
+WHY
+  Step cards (tag memorization::step) belong in daily learning.
+  Full cards (tag memorization::full) are for end-of-week aloud runs.
+  A filtered deck keeps Full cards out of your daily new/review queue.
+
+CREATE THE FILTERED DECK (one-time)
+  1. Anki → Tools → Create Deck
+  2. Name: Memorize :: Full recitation (weekly)
+  3. Click the new deck → Study (empty is OK)
+  4. Deck options (gear icon next to deck name):
+       Show only cards with tag: memorization::full
+     Save
+  5. Optional — deck options for this filtered deck only:
+       New cards/day .............. 20 (or "9999" if you want no cap)
+       Maximum reviews/day ........ 50
+       (Learning steps can stay default — you grade Full cards after reciting.)
+
+WEEKLY ROUTINE
+  Mon–Sat: Study the leaf subdeck for your current passage
+           (e.g. Memorize::Alice's Adventures in Wonderland::p. 16)
+  1–2×/week: Study "Memorize :: Full recitation (weekly)"
+           → recite each passage aloud without peeking → grade honestly
+
+BROWSE (optional)
+  Browse → search: tag:memorization::full
+  Useful to preview which passages have a Full card ready.
+
+NOTE ON DECK NAMES (plugin v2)
+  Leaf decks are now short: Memorize::Book Title::p. 10
+  (book title is not repeated in the leaf name)
+
+
+================================================================================
+PART 9 — PLUGIN settings (Memorization)
+Prefer AnkiKOAi → Settings → Memorization on the device.
+Or edit configuration.lua memorize section on your PC.
+================================================================================
+
+ON-DEVICE (AnkiKOAi → Settings → Memorization)
+  Context lines .......... prior steps shown as cue (2–5; use 4 for poetry)
+  Max words per chunk .... prose chunk size (4–12; default 7)
+  Full recitation card ... ON adds one memorization::full card per passage
+  Parent deck ............ top-level deck (default Memorize)
+  Note type .............. Anki model (default Memorization)
+
+configuration.lua (defaults if not set in Settings UI):
+
+    memorize = {
+        parent_deck             = "Memorize",
+        model                   = "Memorization",
+        context_lines           = 3,
+        max_words_per_unit      = 7,
+        auto_create_deck        = true,
+        include_full_recitation = true,
+        tags                    = { "KOReader", "memorization" },
+    },
+
+Tuning guide:
+  Prose (paragraphs)  → max_words_per_unit = 6–8, context_lines = 2–3
+  Poetry (line breaks)  → highlight with line breaks; max_words_per_unit ignored
+  Long stanzas          → context_lines = 4
+
+Duplicate warning: if the same book + page deck already has cards, the plugin
+warns before sending again.
+
+
+================================================================================
+PART 10 — WIKI CARD & VOCABULARY CARD (separate decks & presets)
+================================================================================
+
+Memorization uses the Memorize deck hierarchy (Parts 1–9 above).
+Wiki Card and Vocabulary Card use a DIFFERENT deck and presets — do not reuse
+the Memorize preset for AI reading notes or dictionary drill cards.
+
+WIKI CARD (AI)
+  Note type:  Wiki Card
+  Fields:     Phrase, Text, Links, Source (+ optional Definition, IPA, Synonyms)
+  Deck:       English::Koreader  (configuration.lua → anki.deck)
+  Preset:     Wiki Card — new 20–40/day, reviews 200/day, steps 1m 10m 1d
+
+  Templates + CSS:  docs/desktop/wiki-card-anki-templates.txt
+  Full guide:       docs/anki-vocabulary.md
+
+VOCABULARY CARD (No AI — dictionary only)
+  Note type:  Vocabulary Card
+  Fields:     Phrase, Definition, Context, Source
+  Deck:       English::Koreader  (same parent deck as Wiki Card is fine)
+  Preset:     Vocabulary Card — new 30–50/day, reviews 250/day, steps 1m 10m 1d
+
+  Templates + CSS:  docs/desktop/vocabulary-card-anki-templates.txt
+  Full guide:       docs/anki-vocabulary-card.md
+
+TWO-PRESET SETUP (recommended alongside Memorize)
+  Preset "Memorize"      → Memorize::* subdecks (verbatim step/full cards)
+  Preset "Wiki Card"     → English::Koreader (AI reading notes)
+  Preset "Vocabulary"    → English::Koreader (dictionary-only notes)
+
+Legacy Wiki Card note types "Information card" and "Vocabulary" still work if
+fields match; new setups should add the Links field and use wiki-card-anki-templates.txt.
+
+
+================================================================================
+PART 11 — ANKICONNECT
+================================================================================
+
+Anki Desktop running + AnkiConnect add-on (port 8765)
+Plugin URL: http://YOUR_PC_LAN_IP:8765   (not localhost from Kindle)
+
+Vocabulary deck in anki.deck  = English::Koreader
+Memorization parent in memorize.parent_deck = Memorize
+(Subdecks auto-created per highlight, e.g. Memorize::Alice's Adventures in Wonderland::p. 10)
+
+
+================================================================================
+PART 12 — STUDY ROUTINE (most effective)
+================================================================================
+
+Day 1 (before Anki):
+  1. Read passage once
+  2. Chain aloud: 1 line → 2 lines → … up to ~6 lines
+  3. Sleep
+  4. Full recitation aloud; fix weak spots only
+
+Daily (Anki):
+  1. Review step cards (tag memorization::step) in that piece's subdeck
+  2. End with ONE full recitation aloud without looking
+  3. Grade the Full card (tag memorization::full) based on that run-through
+
+Tags the plugin adds automatically:
+  memorization::step  — each chunk/line card
+  memorization::full  — whole passage card
+
+
+================================================================================
+END
+================================================================================
