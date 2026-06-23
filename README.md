@@ -8,17 +8,26 @@ Unlike manually exporting highlights, AnkiKOAi builds finished, formatted cards 
 
 ## Demo
 
-<!--
-  Drop your images/GIF into docs/images/ with these exact names and they will render here.
-  A short GIF of: long-press/highlight → AnkiKOAi menu → card preview → card in Anki
-  is the single best thing for sharing on Reddit, MobileRead, and forums.
--->
+From a highlight to a finished Anki card, without leaving your book:
 
-![AnkiKOAi: highlight to Anki card demo](docs/images/demo.gif)
-
-| Highlight → menu | Card preview | In Anki |
+| 1. Long-press / highlight | 2. Review the card | 3. Pick an Anki deck |
 |---|---|---|
-| ![Highlight menu](docs/images/highlight-menu.png) | ![Card preview](docs/images/card-preview.png) | ![Card in Anki](docs/images/anki-card.png) |
+| ![Highlight menu with the AnkiKOAi entry](docs/images/highlight-menu.png) | ![Generated card preview on the device](docs/images/card-preview.png) | ![Choosing the target Anki deck](docs/images/deck-picker.png) |
+
+The card lands in desktop Anki, ready to study:
+
+![The finished card in desktop Anki](docs/images/anki-card.png)
+
+### Memorization (poetry & prose)
+
+Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step cards plus a full-recitation card:
+
+| 1. Create Memorization Card | 2. Confirm the deck | 3. Step card in Anki |
+|---|---|---|
+| ![Memorization entry in the AnkiKOAi menu](docs/images/memorization-menu.png) | ![Confirmation showing step + recitation cards](docs/images/memorization-confirm.png) | ![A memorization step card in Anki](docs/images/memorization-anki.png) |
+
+<!-- Optional: add a short screen recording as docs/images/demo.gif and embed it above for social posts. -->
+
 
 ## Features
 
