@@ -11,7 +11,7 @@ Use these in GitHub, releases, forum posts, and the KOReader AppStore listing.
 ### One line (GitHub About — max ~350 characters)
 
 ```
-KOReader plugin: highlight text while reading → AI vocabulary or LPCG-style memorization cards → sync to Anki via AnkiConnect. Kobo, Kindle, emulator.
+KOReader plugin: long-press a word or highlight a passage → AI vocabulary or LPCG-style memorization cards → sync to Anki via AnkiConnect. Kobo, Kindle, emulator.
 ```
 
 ### Short (social, AppStore, issue templates)

@@ -1,6 +1,6 @@
 # AnkiKOAi
 
-KOReader plugin: highlight text while reading → AI vocabulary cards or LPCG-style memorization decks → sync to Anki via [AnkiConnect](https://foosoft.net/projects/anki-connect/).
+KOReader plugin: long-press a word or highlight a passage while reading → AI vocabulary cards or LPCG-style memorization decks → sync to Anki via [AnkiConnect](https://foosoft.net/projects/anki-connect/).
 
 Works on Kobo, Kindle (with KOReader), and the KOReader desktop emulator.
 
@@ -18,7 +18,7 @@ Works on Kobo, Kindle (with KOReader), and the KOReader desktop emulator.
 1. Install the plugin into `koreader/plugins/AnkiKOAi.koplugin/`
 2. Set up three Anki note types: **Wiki Card**, **Vocabulary Card**, and **Memorization**
 3. Configure AnkiConnect on your PC and enter your LAN URL in plugin Settings
-4. Highlight text → **AnkiKOAi** → choose a card type
+4. Long-press a word or highlight text → **AnkiKOAi** → choose a card type
 
 **Full walkthrough:** [docs/getting-started.md](docs/getting-started.md)
 
