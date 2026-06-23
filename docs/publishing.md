@@ -124,14 +124,14 @@ The topic **`koreader-plugin`** is required for the [KOReader AppStore](https://
 Users and the AppStore expect tagged releases.
 
 1. GitHub → **Releases → Create a new release**
-2. **Tag:** `v1.1.0` (match `version` in [`_meta.lua`](../_meta.lua))
-3. **Title:** `v1.1.0 — AI vocab + memorization for Anki`
+2. **Tag:** `v1.0.0` (match `version` in [`_meta.lua`](../_meta.lua))
+3. **Title:** `v1.0.0 — AI vocab + memorization for Anki`
 4. **Description:** short changelog + link to [Getting started](getting-started.md)
 5. **Attach assets:** zip the plugin folder contents so the zip contains `AnkiKOAi.koplugin/` at the top level:
 
    ```bash
    # From parent directory of the plugin folder
-   zip -r AnkiKOAi-v1.1.0.zip AnkiKOAi.koplugin \
+   zip -r AnkiKOAi-v1.0.0.zip AnkiKOAi.koplugin \
      -x "*.git*" -x "*configuration.lua" -x "*_settings.json" -x "*_cards.json" -x "*.log"
    ```
 
