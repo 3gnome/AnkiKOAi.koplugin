@@ -41,7 +41,7 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
     if saved then
         for k, v in pairs(saved) do cfg[k] = v end
     end
-    local migrate_msg = CardFields.migrate_anki_settings(cfg)
+    local _migrated_cfg, migrate_msg = CardFields.migrate_anki_settings(cfg)
     if migrate_msg then
         CardStorage.save_anki_settings(cfg)
         UIManager:scheduleIn(0.2, function()
