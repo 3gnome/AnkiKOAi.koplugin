@@ -419,25 +419,13 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
     local default_model = CardFields.default_wiki_model(CONFIGURATION)
     local generate_model = default_model
 
-    local function do_generate(chosen_model, attempts_left)
+    local function do_generate(chosen_model)
+        -- Transient provider errors (429/5xx) are retried inside
+        -- CardGenerator.call_llm with backoff, so handle the result directly.
         local card, err = CardGenerator.generate(
             CONFIGURATION, phrase, context, title, author, chosen_model
         )
         if not card then
-            if err and err:find("429") and attempts_left > 0 then
-                local rn = Notification:new {
-                    text    = _("Rate limited — retrying in 5 s…"),
-                    timeout = 6,
-                }
-                UIManager:show(rn)
-                UIManager:scheduleIn(5, function()
-                    UIManager:close(rn)
-                    UiBusy.run(_("Generating flashcard for: ") .. phrase, function()
-                        do_generate(chosen_model, attempts_left - 1)
-                    end)
-                end)
-                return
-            end
             UIManager:show(InfoMessage:new {
                 text    = _("Card generation failed: ") .. (err or "unknown"),
                 timeout = 5,
@@ -573,7 +561,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
         generate_model = chosen_model
         schedule_online_task(function()
             UiBusy.run(_("Generating flashcard for: ") .. phrase, function()
-                do_generate(chosen_model, 2)
+                do_generate(chosen_model)
             end)
         end)
     end
