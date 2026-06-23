@@ -1,12 +1,22 @@
 -- AI flashcard generator with dynamic Anki note type fields.
 
 local https  = require("ssl.https")
+local socket = require("socket")
 local ltn12  = require("ltn12")
 local json   = require("json")
 local _      = require("gettext")
 
 local TIMEOUT = 20
 https.TIMEOUT = TIMEOUT
+
+-- Transient failures worth retrying: rate limits (429), and upstream/server
+-- overload or gateway errors. Providers like Gemini return 503 "UNAVAILABLE"
+-- during demand spikes; these usually clear within a few seconds.
+local MAX_LLM_ATTEMPTS = 3
+local RETRYABLE_HTTP = {
+    ["429"] = true, ["500"] = true, ["502"] = true,
+    ["503"] = true, ["504"] = true, ["529"] = true,
+}
 
 local CardFields         = require("card_fields")
 local NoteTypePicker     = require("note_type_picker")
@@ -20,7 +30,7 @@ local CardGenerator = {}
 local GEMINI_BASE_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/"
 
-local function call_llm(config, prompt)
+local function call_llm_once(config, prompt)
     local provider = config.text_provider or "dashscope"
     local response_body = {}
 
@@ -102,6 +112,37 @@ local function call_llm(config, prompt)
         end
         return nil, "Unexpected API response format"
     end
+end
+
+local function is_retryable_error(err)
+    if type(err) ~= "string" then return false end
+    local code = err:match("^HTTP (%d+)")
+    if code and RETRYABLE_HTTP[code] then return true end
+    -- Network-level failures and provider overload messages surfaced as text.
+    local lowered = err:lower()
+    if lowered:find("timeout") or lowered:find("closed")
+       or lowered:find("connection") or lowered:find("temporarily")
+       or lowered:find("unavailable") or lowered:find("overloaded")
+       or lowered:find("high demand") then
+        return true
+    end
+    return false
+end
+
+-- Retry transient provider failures with exponential backoff (1s, 2s).
+local function call_llm(config, prompt)
+    local last_err
+    for attempt = 1, MAX_LLM_ATTEMPTS do
+        local text, err = call_llm_once(config, prompt)
+        if text then return text end
+        last_err = err
+        if attempt >= MAX_LLM_ATTEMPTS or not is_retryable_error(err) then
+            return nil, err
+        end
+        UiBusy.pulse(_("Provider busy — retrying…"))
+        socket.sleep(2 ^ (attempt - 1))
+    end
+    return nil, last_err
 end
 
 local function escape_for_prompt(s)
