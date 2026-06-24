@@ -150,7 +150,7 @@ if [ "$PUBLISH_ONLY" -eq 0 ] && [ "$TAG_EXISTS" -eq 0 ]; then
     fi
 fi
 
-if [ "$SKIP_PUSH" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
+if [ "$SKIP_PUSH" -eq 0 ] && [ "$PUBLISH_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
     step "Pushing main"
     git push origin main
     if [ "$TAG_EXISTS" -eq 0 ]; then

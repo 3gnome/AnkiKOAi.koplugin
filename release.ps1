@@ -135,7 +135,7 @@ try {
         }
     }
 
-    if (-not $SkipPush -and -not $DryRun) {
+    if (-not $SkipPush -and -not $PublishOnly -and -not $DryRun) {
         Write-Step "Pushing main"
         git push origin main
         if (-not $tagExists) {
