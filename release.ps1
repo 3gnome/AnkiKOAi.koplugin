@@ -26,6 +26,16 @@ $MetaFile = Join-Path $RepoRoot "_meta.lua"
 $PluginFolder = "AnkiKOAi.koplugin"
 $ZipDir = Split-Path -Parent $RepoRoot
 
+# Refresh PATH so gh is found in terminals opened before winget install.
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+    [System.Environment]::GetEnvironmentVariable("Path", "User")
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    $ghDir = "C:\Program Files\GitHub CLI"
+    if (Test-Path (Join-Path $ghDir "gh.exe")) {
+        $env:Path = "$ghDir;$env:Path"
+    }
+}
+
 function Write-Step([string]$Message) {
     Write-Host "==> $Message"
 }
