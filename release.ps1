@@ -169,8 +169,11 @@ try {
     }
 
     $releaseExists = $false
-    gh release view $tag *> $null
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    gh release view $tag 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) { $releaseExists = $true }
+    $ErrorActionPreference = $prevEap
 
     if ($releaseExists) {
         Write-Step "Release exists; uploading asset"
