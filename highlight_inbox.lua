@@ -342,7 +342,7 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
     local function run_memorization_batch(to_do, title, author)
         local cfg = PoetryMemorize.config(config)
         local total = #to_do
-        local done_passages, failed = 0, 0
+        local done_passages, saved_local, failed = 0, 0, 0
         local prog_notif
 
         local function show_progress(i)
@@ -357,10 +357,14 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
         local function finish()
             if prog_notif then UIManager:close(prog_notif) end
             local msg = tostring(done_passages) .. _(" passage(s) sent to Anki")
+            if saved_local > 0 then
+                msg = msg .. ", " .. tostring(saved_local)
+                    .. _(" saved locally (Anki unavailable)")
+            end
             if failed > 0 then
                 msg = msg .. ", " .. tostring(failed) .. _(" failed")
             end
-            UIManager:show(Notification:new { text = msg, timeout = 5 })
+            UIManager:show(Notification:new { text = msg, timeout = 6 })
         end
 
         local function send_next(i)
@@ -369,6 +373,10 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
             local text = clean(h.text or "", 2000)
             show_progress(i)
             UIManager:scheduleIn(0.05, function()
+                -- send_highlight populates meta (title, location, piece_label,
+                -- source) before attempting the send, so on failure we can
+                -- resolve the same deck and queue the passage locally instead
+                -- of losing it.
                 local meta = {
                     book_title  = title,
                     book_author = author,
@@ -377,7 +385,13 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                     if ok then
                         done_passages = done_passages + 1
                     else
-                        failed = failed + 1
+                        local deck = PoetryMemorize.resolve_deck(
+                            cfg, meta.book_title, meta.piece_label)
+                        if CardStorage.save_memorization_pending(text, meta, deck) then
+                            saved_local = saved_local + 1
+                        else
+                            failed = failed + 1
+                        end
                     end
                     send_next(i + 1)
                 end)

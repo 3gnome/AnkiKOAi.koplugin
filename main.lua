@@ -1079,7 +1079,7 @@ function AnkiKOAi:init()
         if not NetworkMgr:isOnline() then return end
         if CardStorage.count_unsent() == 0 then return end
 
-        CardManager.send_all_unsent(CONFIGURATION, nil, {})
+        CardManager.send_all_unsent(CONFIGURATION, nil, { background = true })
     end
     -- First check after 30s to let KOReader settle on startup.
     UIManager:scheduleIn(30, auto_send_tick)

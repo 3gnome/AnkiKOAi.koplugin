@@ -65,9 +65,11 @@ function CardManager.count_unsent()
     return CardStorage.count_unsent()
 end
 
-local function send_memorization_card(anki_config, base_config, card, send_ui, done)
+local function send_memorization_card(anki_config, base_config, card, send_ui, done, quiet)
     if not is_anki_ready(anki_config) then
-        notify_error(_("Anki URL not set. Use AnkiKOAi → Settings."))
+        if not quiet then
+            notify_error(_("Anki URL not set. Use AnkiKOAi → Settings."))
+        end
         if done then done(false, "Anki URL not set") end
         return
     end
@@ -84,10 +86,10 @@ local function send_memorization_card(anki_config, base_config, card, send_ui, d
         function(ok, err_or_msg, info)
             if ok then
                 local deck = (info and info.deck) or meta.deck or anki_config.deck or ""
-                CardStorage.mark_sent(card.phrase, deck, "")
-                notify(err_or_msg or _("Sent!"))
+                CardStorage.mark_sent_memorization(card.memorization_text, deck)
+                if not quiet then notify(err_or_msg or _("Sent!")) end
             else
-                notify_error(err_or_msg or _("Send failed"))
+                if not quiet then notify_error(err_or_msg or _("Send failed")) end
             end
             if done then done(ok, err_or_msg) end
         end)
@@ -101,7 +103,9 @@ function CardManager.send_all_unsent(base_config, ui, opts)
     end
     local anki_config = effective_config(base_config)
     if not is_anki_ready(anki_config) then
-        notify_error(_("Anki URL not set. Use AnkiKOAi → Settings."))
+        if not opts.background then
+            notify_error(_("Anki URL not set. Use AnkiKOAi → Settings."))
+        end
         if opts.on_done then opts.on_done(0, 0) end
         return
     end
@@ -119,7 +123,7 @@ function CardManager.send_all_unsent(base_config, ui, opts)
     end
 
     if #pending_mem == 0 and #pending_sync == 0 then
-        notify(_("No pending cards to send."))
+        if not opts.background then notify(_("No pending cards to send.")) end
         if opts.on_done then opts.on_done(0, 0) end
         return
     end
@@ -173,7 +177,11 @@ function CardManager.send_all_unsent(base_config, ui, opts)
                 msg = msg .. AnkiSync.sync_status_suffix(anki_config)
             end
         end
-        notify(msg)
+        -- In background (auto-send) mode, stay silent unless something was
+        -- actually sent, so a repeatedly-unreachable Anki can't spam toasts.
+        if not opts.background or sent > 0 then
+            notify(msg)
+        end
         if opts.on_done then opts.on_done(sent, failed) end
     end
 
@@ -186,7 +194,7 @@ function CardManager.send_all_unsent(base_config, ui, opts)
             function(ok)
                 if ok then sent = sent + 1 else failed = failed + 1 end
                 send_memorization_at(index + 1)
-            end)
+            end, opts.background)
     end
 
     if #pending_mem > 0 then

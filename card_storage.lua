@@ -376,6 +376,27 @@ function CardStorage.mark_sent(phrase, target_deck, target_model)
     save_raw(entries)
 end
 
+-- Mark a memorization passage as sent. Memorization cards must be matched on
+-- their full text (the phrase is a title-derived label that many passages from
+-- the same book/page can share), otherwise the wrong pending card gets flagged.
+function CardStorage.mark_sent_memorization(memorization_text, target_deck)
+    local key     = normalize(memorization_text)
+    if key == "" then return end
+    local entries = load_raw()
+    for _, e in ipairs(entries) do
+        if e.card_kind == "memorization"
+           and normalize(e.memorization_text) == key then
+            e.sent_to_anki = true
+            if target_deck and target_deck ~= "" then
+                e.target_deck       = target_deck
+                e.memorization_deck = target_deck
+            end
+            break
+        end
+    end
+    save_raw(entries)
+end
+
 -- Persist Anki connection settings (override configuration.lua at runtime).
 function CardStorage.save_anki_settings(settings)
     local ok, encoded = pcall(json.encode, settings)

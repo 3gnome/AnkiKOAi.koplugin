@@ -2,9 +2,9 @@
 -- See https://ankilpcg.readthedocs.io/en/stable/theory.html
 
 local ConfirmBox   = require("ui/widget/confirmbox")
-local ButtonDialog = require("ui/widget/buttondialog")
 local InfoMessage  = require("ui/widget/infomessage")
 local Notification = require("ui/widget/notification")
+local TextViewer   = require("ui/widget/textviewer")
 local UIManager    = require("ui/uimanager")
 local _            = require("gettext")
 
@@ -64,10 +64,14 @@ function PoetryMemorize.maybe_show_intro(then_fn, on_cancel)
         return
     end
 
+    -- Use TextViewer (scrollable body) rather than ButtonDialog: the intro is a
+    -- long multi-line description, which would overflow a ButtonDialog title.
     local intro_dlg
-    intro_dlg = ButtonDialog:new {
-        title   = PoetryMemorize.INTRO_TEXT,
-        buttons = {
+    intro_dlg = TextViewer:new {
+        title         = _("Memorization cards"),
+        text          = PoetryMemorize.INTRO_TEXT,
+        show_menu     = false,
+        buttons_table = {
             {{ text = _("Continue"), callback = function()
                 UIManager:close(intro_dlg)
                 then_fn()
@@ -467,10 +471,14 @@ local function show_memorize_send_confirm(base_config, text, ui, meta, cfg, line
     body = body .. "\n\n" .. _(
         "Save for later if Anki is unreachable. Send pending cards from My Cards or the hub menu.")
 
+    -- Use TextViewer (scrollable body) rather than ButtonDialog: ButtonDialog
+    -- only scrolls its button rows, so a long summary overflows the screen.
     local dlg
-    dlg = ButtonDialog:new {
-        title   = body,
-        buttons = {
+    dlg = TextViewer:new {
+        title         = _("Send memorization cards"),
+        text          = body,
+        show_menu     = false,
+        buttons_table = {
             {{ text = _("Send to Anki"), callback = function()
                 UIManager:close(dlg)
                 local loading = Notification:new {
