@@ -123,6 +123,29 @@ The topic **`koreader-plugin`** is required for the [KOReader AppStore](https://
 
 Users and the AppStore expect tagged releases.
 
+**One-command release (recommended):**
+
+```powershell
+# First time on this machine:
+gh auth login
+
+# From the plugin repo:
+.\release.ps1                  # bump patch, zip, tag, push, publish
+.\release.ps1 -PublishOnly     # upload zip for current _meta.lua version
+```
+
+On WSL/Linux:
+
+```bash
+gh auth login
+bash release.sh
+bash release.sh --publish-only
+```
+
+The script builds `../AnkiKOAi-vX.Y.Z.zip` with `AnkiKOAi.koplugin/` at the top level (via `git archive`), bumps `_meta.lua` unless you pass a version, tags `vX.Y.Z`, pushes, and publishes the GitHub Release with `gh`.
+
+**Manual release:**
+
 1. GitHub → **Releases → Create a new release**
 2. **Tag:** `v1.0.0` (match `version` in [`_meta.lua`](../_meta.lua))
 3. **Title:** `v1.0.0 — AI vocab + memorization for Anki`
@@ -229,13 +252,14 @@ git add .
 git commit -m "Describe what changed"
 git push
 
-# New release
-git tag v1.2.0
-git push origin v1.2.0
-# Then create GitHub Release from tag and attach new zip
+# New release (one command)
+gh auth login   # first time only
+bash release.sh
 ```
 
-Update `_meta.lua` `version` to match the tag.
+Or on Windows PowerShell: `.\release.ps1`
+
+Update `_meta.lua` `version` to match the tag (the release script does this automatically when bumping).
 
 ---
 
