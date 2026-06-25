@@ -134,8 +134,11 @@ try {
 
     $tagExists = $false
     if (-not $DryRun) {
-        git rev-parse "refs/tags/$tag" *> $null
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        git rev-parse "refs/tags/$tag" 2>$null | Out-Null
         $tagExists = ($LASTEXITCODE -eq 0)
+        $ErrorActionPreference = $prevEap
     }
 
     if (-not $PublishOnly -and -not $tagExists) {
