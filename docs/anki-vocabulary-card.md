@@ -157,20 +157,28 @@ Dictionary definitions are shorter than AI Wiki Cards — slightly higher daily 
 
 ## 7. Plugin settings (must match Anki)
 
-| Setting | Default | Notes |
-|---------|---------|-------|
-| Vocabulary note type | Vocabulary Card | Settings → Vocabulary note type |
-| Deck | English::Koreader | Same deck as Wiki Cards is fine |
-| Tags | KOReader | Applied on send |
+Configure on device under **AnkiKOAi → Settings → Card defaults**:
+
+| Setting | Default | Menu path |
+|---------|---------|-----------|
+| Vocabulary note type | Vocabulary Card | Card defaults → Vocabulary Card… |
+| Default deck | English::Koreader | Card defaults → Vocabulary Card… |
+| Preferred dictionary | (auto) | Card defaults → Vocabulary Card… |
+| One-tap send (Vocabulary) | OFF | Card defaults → Vocabulary Card… |
+| Subdeck by book title | ON | Card defaults → Send routing… |
+| Tags | KOReader | Settings → Tags… |
+
+**One-tap send** uses your default deck and auto-picks the preferred dictionary when set. With multiple dictionaries and no preferred name, the plugin shows the picker once.
 
 In `configuration.lua`:
 
 ```lua
 anki = {
     url   = "http://192.168.1.100:8765",
-    deck  = "English::Koreader",
-    model = "Wiki Card",              -- for Wiki Card (AI) only
-    vocabulary_model = "Vocabulary Card",  -- for dictionary cards
+    vocabulary_deck = "English::Koreader",
+    vocabulary_model = "Vocabulary Card",
+    auto_send_vocabulary = false,
+    vocabulary_preferred_dictionary = "",
     tags  = { "KOReader" },
 },
 ```

@@ -10,6 +10,8 @@ local _            = require("gettext")
 local CardGenerator   = require("card_generator")
 local CardFields      = require("card_fields")
 local CardStorage     = require("card_storage")
+local CardDefaults    = require("card_defaults")
+local SendFlow        = require("send_flow")
 local DictionaryLookup
 do
     local ok, mod = pcall(require, "dictionary_lookup")
@@ -212,9 +214,13 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
     local function run_wiki_batch(to_do, title, author)
         local total     = #to_do
         local done      = 0
+        local sent      = 0
         local failed    = 0
         local last_err  = nil
         local wiki_model = CardFields.default_wiki_model(config)
+        local auto_send = CardDefaults.auto_send_wiki(config)
+        local default_deck = CardDefaults.wiki_deck(config)
+        local anki_cfg = CardFields.merged_anki_settings(config)
         local prog_notif
 
         local function show_progress(i)
@@ -228,7 +234,15 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
 
         local function finish()
             if prog_notif then UIManager:close(prog_notif) end
-            local msg = tostring(done) .. _(" card(s) saved")
+            local msg
+            if auto_send then
+                msg = tostring(sent) .. _(" card(s) sent to Anki")
+                if done > 0 then
+                    msg = msg .. ", " .. tostring(done) .. _(" saved locally")
+                end
+            else
+                msg = tostring(done) .. _(" card(s) saved")
+            end
             if failed > 0 then
                 msg = msg .. ", " .. tostring(failed) .. _(" failed")
                 if last_err and last_err ~= "" then
@@ -240,30 +254,53 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
             UIManager:show(Notification:new { text = msg, timeout = 8 })
         end
 
+        local function after_card(card, i)
+            if not card then
+                failed = failed + 1
+                generate_next(i + 1)
+                return
+            end
+            apply_highlight_meta(card, to_do[i], clean(to_do[i].text or "", 2000))
+            CardStorage.save_or_update(card)
+            if auto_send and default_deck then
+                card.target_deck = default_deck
+                SendFlow.quick_send(anki_cfg, card, function(ok, err)
+                    if ok then
+                        sent = sent + 1
+                    else
+                        done = done + 1
+                        if err then last_err = err end
+                    end
+                    generate_next(i + 1)
+                end, { ui = ui, use_configured_deck = true })
+            else
+                done = done + 1
+                generate_next(i + 1)
+            end
+        end
+
         local function generate_next(i)
             if i > total then finish(); return end
             local h      = to_do[i]
-            local phrase = capitalize_first(clean(h.text or "", 2000))
-            local context = highlight_context(h)
+            local highlight_text = clean(h.text or "", 2000)
+            local phrase = capitalize_first(highlight_text)
             show_progress(i)
             UIManager:scheduleIn(0.05, function()
                 local card, err = CardGenerator.generate(
-                    config, phrase, context, title, author, wiki_model
+                    config, phrase, highlight_text, title, author, wiki_model
                 )
-                if card then
-                    CardFields.apply_reading_source(
-                        card, title, author, cambridge_url(card.phrase, config),
-                        ReadingLocation.describe(ui))
-                    card.book_title  = title
-                    card.book_author = author
-                    apply_highlight_meta(card, h, context)
-                    CardStorage.save_or_update(card)
-                    done = done + 1
-                else
+                if not card then
                     failed = failed + 1
                     last_err = err
+                    generate_next(i + 1)
+                    return
                 end
-                generate_next(i + 1)
+                CardFields.apply_reading_source(
+                    card, title, author, cambridge_url(card.phrase, config),
+                    ReadingLocation.describe(ui))
+                card.book_title  = title
+                card.book_author = author
+                after_card(card, i)
             end)
         end
 
@@ -276,7 +313,12 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
         local model  = CardFields.default_vocabulary_model(config)
         local total  = #to_do
         local done   = 0
+        local sent   = 0
         local failed = 0
+        local auto_send = CardDefaults.auto_send_vocabulary(config)
+        local default_deck = CardDefaults.vocabulary_deck(config)
+        local anki_cfg = CardFields.merged_anki_settings(config)
+        local pref_dict = CardDefaults.vocabulary_dictionary(config)
         local prog_notif
 
         local function show_progress(i)
@@ -290,11 +332,37 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
 
         local function finish()
             if prog_notif then UIManager:close(prog_notif) end
-            local msg = tostring(done) .. _(" card(s) saved")
+            local msg
+            if auto_send then
+                msg = tostring(sent) .. _(" card(s) sent to Anki")
+                if done > 0 then
+                    msg = msg .. ", " .. tostring(done) .. _(" saved locally")
+                end
+            else
+                msg = tostring(done) .. _(" card(s) saved")
+            end
             if failed > 0 then
                 msg = msg .. ", " .. tostring(failed) .. _(" failed")
             end
             UIManager:show(Notification:new { text = msg, timeout = 5 })
+        end
+
+        local function after_vocab_card(card, i)
+            CardStorage.save_or_update(card)
+            if auto_send and default_deck then
+                card.target_deck = default_deck
+                SendFlow.quick_send(anki_cfg, card, function(ok)
+                    if ok then
+                        sent = sent + 1
+                    else
+                        done = done + 1
+                    end
+                    generate_next(i + 1)
+                end, { ui = ui, use_configured_deck = true })
+            else
+                done = done + 1
+                generate_next(i + 1)
+            end
         end
 
         local function generate_next(i)
@@ -309,7 +377,16 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                     generate_next(i + 1)
                     return
                 end
-                local entry = DictionaryLookup.lookup(ui, phrase)
+                local entries, _err = DictionaryLookup.lookup_all(ui, phrase)
+                local entry = nil
+                if entries then
+                    if pref_dict and pref_dict ~= "" then
+                        for _j, e in ipairs(entries) do
+                            if e.dict == pref_dict then entry = e; break end
+                        end
+                    end
+                    if not entry then entry = entries[1] end
+                end
                 if entry then
                     local card = {
                         phrase          = capitalize_first(clean(entry.word or phrase, 2000)),
@@ -327,12 +404,11 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                     CardFields.apply_reading_source(
                         card, title, author, nil, ReadingLocation.describe(ui))
                     CardFields.normalize(card, config)
-                    CardStorage.save_or_update(card)
-                    done = done + 1
+                    after_vocab_card(card, i)
                 else
                     failed = failed + 1
+                    generate_next(i + 1)
                 end
-                generate_next(i + 1)
             end)
         end
 
@@ -345,10 +421,10 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
         local done_passages, saved_local, failed = 0, 0, 0
         local prog_notif
 
-        local function show_progress(i)
+        local function show_progress(label)
             if prog_notif then UIManager:close(prog_notif) end
             prog_notif = Notification:new {
-                text    = _("Sending ") .. tostring(i) .. "/" .. tostring(total) .. "…",
+                text    = label,
                 timeout = 120,
             }
             UIManager:show(prog_notif)
@@ -367,34 +443,71 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
             UIManager:show(Notification:new { text = msg, timeout = 6 })
         end
 
-        local function send_next(i)
-            if i > total then finish(); return end
-            local h = to_do[i]
-            local text = clean(h.text or "", 2000)
-            show_progress(i)
+        local function passage_text(h)
+            return PoetryMemorize.extract_selection_text(ui, {
+                text = h.text or "",
+                pos0 = h.ann and h.ann.pos0,
+                pos1 = h.ann and h.ann.pos1,
+            }, 2000)
+        end
+
+        local function send_one_passage(text, meta, on_done)
+            show_progress(_("Sending memorization cards…"))
             UIManager:scheduleIn(0.05, function()
-                -- send_highlight populates meta (title, location, piece_label,
-                -- source) before attempting the send, so on failure we can
-                -- resolve the same deck and queue the passage locally instead
-                -- of losing it.
-                local meta = {
-                    book_title  = title,
-                    book_author = author,
-                }
                 PoetryMemorize.send_highlight(config, text, ui, meta, function(ok)
                     if ok then
                         done_passages = done_passages + 1
-                    else
-                        local deck = PoetryMemorize.resolve_deck(
-                            cfg, meta.book_title, meta.piece_label)
-                        if CardStorage.save_memorization_pending(text, meta, deck) then
-                            saved_local = saved_local + 1
-                        else
-                            failed = failed + 1
-                        end
+                        if on_done then on_done(true) end
+                        return
                     end
-                    send_next(i + 1)
+                    local piece_cfg = PoetryMemorize.config(config)
+                    local lines = PoetryMemorize.split_units(
+                        PoetryMemorize.prepare_text(text), piece_cfg)
+                    meta.piece_label = meta.piece_label
+                        or PoetryMemorize.derive_piece_label(meta, lines)
+                    local deck = PoetryMemorize.resolve_deck(
+                        piece_cfg, meta.book_title, meta.piece_label)
+                    if CardStorage.save_memorization_pending(text, meta, deck) then
+                        saved_local = saved_local + 1
+                    else
+                        failed = failed + 1
+                    end
+                    if on_done then on_done(false) end
                 end)
+            end)
+        end
+
+        if cfg.merge_batch and total > 1 then
+            local parts = {}
+            for _, h in ipairs(to_do) do
+                local t = passage_text(h)
+                if t ~= "" then table.insert(parts, t) end
+            end
+            local merged = table.concat(parts, "\n")
+            if merged == "" then
+                UIManager:show(Notification:new {
+                    text    = _("No text to memorize."),
+                    timeout = 4,
+                })
+                return
+            end
+            send_one_passage(merged, {
+                book_title  = title,
+                book_author = author,
+            }, finish)
+            return
+        end
+
+        local function send_next(i)
+            if i > total then finish(); return end
+            local h = to_do[i]
+            local text = passage_text(h)
+            show_progress(_("Sending ") .. tostring(i) .. "/" .. tostring(total) .. "…")
+            send_one_passage(text, {
+                book_title  = title,
+                book_author = author,
+            }, function()
+                send_next(i + 1)
             end)
         end
 
@@ -436,7 +549,14 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                 local cfg = PoetryMemorize.config(config)
                 local summary = _("Send ") .. tostring(#to_do)
                     .. _(" highlight(s) as memorization decks.\n\n")
-                    .. _("Each selection becomes step cards (+ optional full card) in Memorize::Book::location.\n")
+                if cfg.merge_batch and #to_do > 1 then
+                    summary = summary
+                        .. _("Merge batch: ON — selections are combined into one passage.\n\n")
+                else
+                    summary = summary
+                        .. _("Each selection becomes step cards (+ optional full card) in Memorize::Book::location.\n")
+                end
+                summary = summary
                     .. _("Note type: ") .. (cfg.model or "Memorization") .. "\n\n"
                     .. _("See docs/anki-memorization.md for Anki setup.")
 
@@ -444,13 +564,17 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                     run_memorization_batch(to_do, title, author)
                 end
 
-                PoetryMemorize.maybe_show_intro(function()
-                    UIManager:show(ConfirmBox:new {
-                        text = summary,
-                        ok_text = _("Send to Anki"),
-                        ok_callback = start_batch,
-                    })
-                end)
+                if cfg.auto_send then
+                    start_batch()
+                else
+                    PoetryMemorize.maybe_show_intro(function()
+                        UIManager:show(ConfirmBox:new {
+                            text = summary,
+                            ok_text = _("Send to Anki"),
+                            ok_callback = start_batch,
+                        })
+                    end)
+                end
             end
         end,
     })

@@ -1,0 +1,132 @@
+# AnkiKOAi — local dev context (Cursor / AI)
+
+Copy this file to **`LOCAL_DEV.md`** (gitignored) and edit machine-specific paths:
+
+```bash
+cp LOCAL_DEV.md.sample LOCAL_DEV.md
+```
+
+**Cursor:** attach `@LOCAL_DEV.md` at session start, or rely on `.cursor/rules/ankikooai-dev.mdc`
+(always reads this file when present).
+
+---
+
+## What this repo is
+
+KOReader Lua plugin (`AnkiKOAi.koplugin/`). Highlights → Wiki / Vocabulary / Memorization
+cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo root.
+
+---
+
+## Module map (main `.lua` files)
+
+| File | Role |
+|------|------|
+| `main.lua` | Entry, highlight hooks, wiki/vocab/mem flows, auto-send tick |
+| `card_defaults.lua` | **Central API** for per-type decks, models, auto-send flags |
+| `card_fields.lua` | Field normalization, settings migration |
+| `card_storage.lua` | `ankikooai_cards.json`, `ankikooai_settings.json` |
+| `settings_viewer.lua` | Settings UI (Card defaults, Send routing, AI, sync) |
+| `plugin_menu.lua` | AnkiKOAi hub menu from highlight dialog |
+| `send_flow.lua` / `anki_sync.lua` | Send + AnkiConnect HTTP |
+| `deck_picker.lua` / `note_type_picker.lua` | Pick from Anki lists |
+| `card_generator.lua` | AI Wiki Card generation |
+| `dictionary_lookup.lua` | Vocabulary Card dictionary path |
+| `poetry_memorize.lua` | Memorization split + send |
+| `highlight_inbox.lua` | Batch highlight flows |
+| `card_manager.lua` | My Cards, manage, send-all-unsent |
+
+---
+
+## Settings architecture (on device)
+
+**Settings → Card defaults** — each card type has **note type + deck** (Anki pickers):
+
+- **Wiki Card…** — `wiki_note_type`, `wiki_deck`, `auto_send_wiki`
+- **Vocabulary Card…** — `vocabulary_model`, `vocabulary_deck`, dictionary, `auto_send_vocabulary`
+- **Memorization Card…** — `memorize_model`, `memorize_parent_deck`, one-tap / quick button
+- **Send routing…** — `subdeck_by_book`, favorites, per-book overrides (**not** default decks)
+
+Use `CardDefaults.*` in code; do not read raw `config.deck` except as legacy fallback inside `card_defaults.lua`.
+
+---
+
+## Configuration sources
+
+| Source | Path | Notes |
+|--------|------|-------|
+| Sample template | `configuration.lua.sample` | Committed |
+| Local secrets | `configuration.lua` | **Gitignored** |
+| On-device overrides | `ankikooai_settings.json` | In KOReader data dir; wins after first save |
+
+---
+
+## Starting KOReader (development)
+
+From repo root in **WSL**:
+
+```bash
+# Emulator: rsyncs plugin → ~/koreader-dev/plugins/AnkiKOAi.koplugin, then ./luajit reader.lua
+bash start.sh --emulator alice.epub
+
+# With log capture (recommended when debugging):
+bash start.sh --emulator alice.epub 2>&1 | tee ~/koreader-emulator.log
+```
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `KOREADER_DIR` | `~/koreader-dev/emulator/usr/lib/koreader` | Emulator tree |
+| `PLUGIN_DST` | `~/koreader-dev/plugins/AnkiKOAi.koplugin` | Rsync target (symlinked into emulator `plugins/`) |
+| `PLUGIN_DIR` | This repo | Rsync source |
+
+**WSL default** (`bash start.sh` without flags) is **AppImage mode** — does **not** sync this
+repo; use `--emulator` when testing plugin changes.
+
+**Machine-specific (edit in your `LOCAL_DEV.md`):**
+
+- WSL distro: `<!-- e.g. Ubuntu -->`
+- Repo path: `<!-- e.g. /mnt/c/Users/you/AnkiKOAi.koplugin -->`
+- Emulator data: `<!-- ~/koreader-dev/emulator/usr/lib/koreader/ -->`
+
+---
+
+## Logging
+
+KOReader dev emulator logs to **stdout** (terminal), not always to a file.
+
+| Log | Typical path |
+|-----|----------------|
+| Captured session | `~/koreader-emulator.log` (via `tee` above) |
+| Emulator data dir | `~/koreader-dev/emulator/usr/lib/koreader/` (`ankikooai_*.json`, `settings/`) |
+
+**Useful grep after a crash:**
+
+```bash
+grep -E 'stack traceback|ERROR |WARN |ankikooai|AnkiKOAi|init failed' ~/koreader-emulator.log
+```
+
+Plugin uses KOReader `logger` (`require("logger")`) → stdout. `main.lua` wraps highlight
+`init()` in `pcall`; failures show `ankikooai init failed:`.
+
+**Highlight dialog rule:** `addToHighlightDialog` callbacks must **never return `nil`**.
+Use `show_in_highlight_dialog_func = function() return false end` to hide a button.
+
+---
+
+## Sanity check (optional)
+
+```bash
+bash _check.sh   # parse-check all .lua with emulator luajit
+```
+
+---
+
+## Do not commit
+
+- `configuration.lua`, `*_settings.json`, `*_cards.json`, `*.log`, `LOCAL_DEV.md`
+
+---
+
+## Docs
+
+User-facing: `docs/`, `README.md`. In-app readmes: `docs/in-app/*.md` (loaded by `readme_viewer.lua`).

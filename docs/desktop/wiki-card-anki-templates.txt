@@ -53,7 +53,12 @@ PART 3 — BACK TEMPLATE
   <div class="phrase phrase--back">{{Phrase}}</div>
   {{#IPA}}<div class="ipa">{{IPA}}</div>{{/IPA}}
 
-  {{#Definition}}<div class="lede">{{Definition}}</div>{{/Definition}}
+  {{#Definition}}
+  <div class="section">
+    <div class="section-label">Highlight</div>
+    <div class="section-body highlight">{{Definition}}</div>
+  </div>
+  {{/Definition}}
 
   {{#Text}}
   <div class="section">
@@ -218,7 +223,11 @@ PART 4 — STYLING
 PART 5 — DECK (suggested)
 ================================================================================
 Create deck:  English::Koreader
-Plugin default deck and note type must match Anki.
+
+Plugin settings (on device):
+  Settings → Card defaults → Wiki Card → Default deck
+  Settings → Card defaults → Wiki Card → Note type: Wiki Card
+  Optional: One-tap send (Wiki) for generate-and-send without deck picker
 
 Suggested deck-options preset name:  Wiki Card
 

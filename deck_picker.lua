@@ -6,8 +6,9 @@ local Notification = require("ui/widget/notification")
 local UIManager    = require("ui/uimanager")
 local _            = require("gettext")
 
-local AnkiSync    = require("anki_sync")
-local CardStorage = require("card_storage")
+local AnkiSync     = require("anki_sync")
+local CardDefaults = require("card_defaults")
+local CardStorage  = require("card_storage")
 local Nav         = require("nav")
 local UiBusy      = require("ui_busy")
 
@@ -218,8 +219,12 @@ function DeckPicker.show(config, card, on_select, opts)
                    .. " — " .. _("using fallback list"),
             timeout = 4,
         })
-        local fallback = {}
-        if config.deck and config.deck ~= "" then table.insert(fallback, config.deck) end
+        local fallback = CardDefaults.configured_deck_names(config)
+        if config.deck and config.deck ~= "" then
+            local seen = {}
+            for _i, d in ipairs(fallback) do seen[d] = true end
+            if not seen[config.deck] then table.insert(fallback, config.deck) end
+        end
         if current ~= "" then
             local seen = {}
             for _i, d in ipairs(fallback) do seen[d] = true end

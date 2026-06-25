@@ -33,11 +33,6 @@ function CardFields.default_wiki_model(config)
     return NoteTypeProfiles.DEFAULT_MODEL
 end
 
--- Backward-compatible alias (Wiki Card default).
-function CardFields.default_model(config)
-    return CardFields.default_wiki_model(config)
-end
-
 function CardFields.default_vocabulary_model(config)
     local ac = merged_anki_settings(config)
     local name = ac.vocabulary_model or NoteTypeProfiles.VOCABULARY_CARD_MODEL
@@ -116,6 +111,45 @@ function CardFields.migrate_anki_settings(settings)
         settings.memorize = settings.memorize or {}
         settings.memorize.model = NoteTypeProfiles.MEMORIZATION_MODEL
         table.insert(notices, _("Invalid memorization note type; using Memorization."))
+    end
+
+    -- send_on_save (removed) → per-type auto-send toggles
+    if settings.send_on_save == true then
+        if settings.auto_send_wiki ~= true then
+            settings.auto_send_wiki = true
+        end
+        if settings.auto_send_vocabulary ~= true then
+            settings.auto_send_vocabulary = true
+        end
+        if settings.auto_send_memorization ~= true then
+            settings.auto_send_memorization = true
+        end
+        settings.send_on_save = nil
+        table.insert(notices, _(
+            "“Send after generate” is now per card type under Card defaults."))
+    end
+
+    -- Legacy memorization auto-send key
+    if settings.memorize_auto_send == true and settings.auto_send_memorization ~= true then
+        settings.auto_send_memorization = true
+    end
+    settings.memorize_auto_send = nil
+
+    -- Legacy skip-hub → unified toggle when unset
+    if settings.auto_send_skip_hub_submenu == nil
+       and settings.memorize_skip_hub_submenu == true then
+        settings.auto_send_skip_hub_submenu = true
+    end
+
+    -- Legacy shared deck → per-type defaults
+    local legacy_deck = (settings.deck and settings.deck ~= "") and settings.deck or nil
+    if legacy_deck then
+        if not settings.wiki_deck or settings.wiki_deck == "" then
+            settings.wiki_deck = legacy_deck
+        end
+        if not settings.vocabulary_deck or settings.vocabulary_deck == "" then
+            settings.vocabulary_deck = legacy_deck
+        end
     end
 
     if #notices == 0 then return settings, nil end
@@ -216,7 +250,7 @@ end
 function CardFields.normalize(card, config)
     if type(card) ~= "table" then return card end
     card.model = NoteTypeProfiles.normalize_model_name(
-        card.model or card.target_model or CardFields.default_model(config))
+        card.model or card.target_model or CardFields.default_wiki_model(config))
 
     if type(card.anki_fields) == "table" and next(card.anki_fields) then
         CardFields.sync_flat_from_anki(card)

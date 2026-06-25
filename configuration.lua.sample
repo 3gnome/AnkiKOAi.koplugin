@@ -29,22 +29,42 @@ local CONFIGURATION = {
     -- AnkiConnect on the same Wi‑Fi as your e-reader. Use your PC's LAN IP, not localhost.
     anki = {
         url   = "http://192.168.1.100:8765",
-        deck  = "English::Koreader",
+        deck  = "English::Koreader",  -- legacy fallback; prefer wiki_deck / vocabulary_deck
+        wiki_deck = "English::Koreader",
+        vocabulary_deck = "English::Koreader",
         wiki_note_type = "Wiki Card",
         model = "Wiki Card",
         vocabulary_model = "Vocabulary Card",
+        memorize_parent_deck = "Memorize",
         tags  = { "KOReader" },
         sync_after_send = true,
+        -- Card defaults (Settings → Card defaults…):
+        -- auto_send_wiki = false,
+        -- auto_send_vocabulary = false,
+        -- auto_send_memorization = false,
+        -- auto_send_skip_hub_submenu = false,
+        -- vocabulary_preferred_dictionary = "My StarDict",
     },
 
-    -- Memorization (LPCG-style step cards + full recitation).
+    -- Memorization behavior (LPCG-style step cards + full recitation).
+    -- Deck, note type, and one-tap send: Settings → Card defaults → Memorization Card
+    -- Split/context/batch toggles: Settings → Memorization options
     memorize = {
         parent_deck             = "Memorize",
         model                   = "Memorization",
         context_lines           = 3,
+        context_cumulative      = false,
         max_words_per_unit      = 7,
         auto_create_deck        = true,
         include_full_recitation = true,
+        force_verse_lines       = false,
+        show_split_preview      = false,
+        replace_duplicates      = false,
+        merge_batch             = false,
+        auto_send               = false,
+        auto_save_on_fail       = false,
+        quick_highlight_button  = false,
+        skip_hub_submenu        = false,
         tags                    = { "KOReader", "memorization" },
     },
 }

@@ -20,7 +20,11 @@ This is a [KOReader](https://github.com/koreader/koreader) plugin written in Lua
 
    ```bash
    cp configuration.lua.sample configuration.lua
+   cp LOCAL_DEV.md.sample LOCAL_DEV.md   # optional: local paths for Cursor AI
    ```
+
+   Edit `LOCAL_DEV.md` with your WSL paths (gitignored). Cursor loads it each session via
+   `.cursor/rules/ankikooai-dev.mdc`, or you can attach `@LOCAL_DEV.md` in chat.
 
 3. Run it against the KOReader desktop emulator or a stable AppImage with the
    helper script:

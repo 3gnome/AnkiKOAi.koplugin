@@ -1,0 +1,21 @@
+---
+description: Load AnkiKOAi local dev context (logging, startup, architecture)
+alwaysApply: true
+---
+
+# AnkiKOAi session bootstrap
+
+At the **start of each session** (before large edits or debugging), read:
+
+1. **`LOCAL_DEV.md`** if it exists (gitignored, machine-specific)
+2. Otherwise **`LOCAL_DEV.md.sample`**
+
+The user may also attach **`@LOCAL_DEV.md`** explicitly.
+
+## Quick reminders
+
+- Plugin code: `*.lua` at repo root. Settings UI: `settings_viewer.lua`. Deck/model API: `card_defaults.lua`.
+- **Card defaults** = per-type note type + deck; **Send routing** = subdeck/favorites/per-book only.
+- Dev launch: `bash start.sh --emulator alice.epub` (WSL). Use `tee ~/koreader-emulator.log` for logs.
+- `addToHighlightDialog` callbacks must not return `nil` — use `show_in_highlight_dialog_func`.
+- Never commit `configuration.lua`, `LOCAL_DEV.md`, API keys, or `*_settings.json`.

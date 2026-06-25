@@ -43,7 +43,8 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 - **Vocabulary Card (No AI)** — KOReader dictionary lookup only — definition + passage, no AI
 - **Memorization Card (No AI, Multi-Line)** — overlapping step cards + full-recitation card for poetry and prose ([AnkiLPCG](https://ankilpcg.readthedocs.io/)-style)
 - **AnkiConnect** — send to desktop Anki; optional auto-sync to AnkiWeb after send
-- **Settings UI** — API keys, decks, note types, memorization chunk size, sync options (no file editing on device)
+- **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync (no file editing on device)
+- **One-tap send** — per card type: skip note-type/deck prompts and send straight to your default deck
 - **Multiple AI providers** — DashScope, Gemini, OpenAI, OpenRouter
 
 ## Quick start
@@ -111,7 +112,7 @@ Copy-paste **front/back templates, CSS, and deck study settings**:
 
 → **[docs/anki-vocabulary.md](docs/anki-vocabulary.md)** (Wiki Card setup guide)
 
-Default deck: `English::Koreader`. Default note type in Settings: **Wiki Card**.
+Default deck: `English::Koreader`. Configure note type and **One-tap send (Wiki)** under **Settings → Card defaults → Wiki Card**.
 
 ## Vocabulary Card (No AI)
 
@@ -167,12 +168,17 @@ Create deck-options presets in Anki:
 
 | Setting | Where |
 |---------|--------|
-| AnkiConnect URL | Settings or `configuration.lua` → `anki.url` |
-| Wiki note type / Vocabulary note type | Settings → main screen |
-| Default deck | Settings → main screen |
-| Memorization chunk size, context lines | Settings → Memorization |
-| Sync to AnkiWeb after send | Settings (default ON) |
-| API keys | Settings → API Keys (Wiki Card only) |
+| AnkiConnect URL | **Settings → Anki connection…** or `configuration.lua` → `anki.url` |
+| Wiki / Vocabulary / Memorization note types | **Settings → Card defaults…** (per card type) |
+| Default deck (Wiki) | **Settings → Card defaults → Wiki Card…** |
+| Default deck (Vocabulary) | **Settings → Card defaults → Vocabulary Card…** |
+| Memorization parent deck | **Settings → Card defaults → Memorization Card…** |
+| Subdeck by book (Wiki/Vocab) | **Settings → Card defaults → Send routing…** |
+| One-tap send (per card type) | **Settings → Card defaults…** |
+| Memorization split/context behavior | **Settings → Memorization options…** |
+| Sync to AnkiWeb after send | **Settings → Anki connection…** (default ON) |
+| API keys | **Settings → AI Settings → API Keys** (Wiki Card only) |
+| Send pending when WiFi connects | **Settings → Sync…** |
 
 Details: [docs/plugin-configuration.md](docs/plugin-configuration.md)
 
@@ -186,6 +192,8 @@ bash start.sh alice.epub   # optional sample book
 ```
 
 Set `KOREADER_DIR` if your emulator is not at `~/koreader-dev/emulator/usr/lib/koreader`.
+
+For Cursor / local AI context: copy `LOCAL_DEV.md.sample` → `LOCAL_DEV.md` (gitignored) or use `@LOCAL_DEV.md` in chat.
 
 ## About this plugin
 

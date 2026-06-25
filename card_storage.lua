@@ -111,19 +111,6 @@ local function same_card(a, b)
     return normalize(a.phrase) == normalize(b.phrase)
 end
 
--- Save a new card. Returns true on success or false + reason string.
-function CardStorage.save_card(card)
-    local entries = load_raw()
-    for _, e in ipairs(entries) do
-        if same_card(e, card) then
-            return false, "already_saved"
-        end
-    end
-    table.insert(entries, CardStorage.serialize_entry(card))
-    if not save_raw(entries) then return false, "write_failed" end
-    return true
-end
-
 -- Upsert by card identity (used for auto-save after generation).
 function CardStorage.save_or_update(card)
     local entries = load_raw()

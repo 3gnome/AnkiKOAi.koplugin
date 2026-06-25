@@ -20,6 +20,7 @@ local AnkiSync         = require("anki_sync")
 local CardManager      = require("card_manager")
 local CardSync         = require("card_sync")
 local CardFields       = require("card_fields")
+local CardDefaults     = require("card_defaults")
 local NoteTypePicker   = require("note_type_picker")
 local NoteTypeProfiles = require("note_type_profiles")
 local SendFlow         = require("send_flow")
@@ -391,10 +392,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
     end
     local highlight_pos0 = sel and sel.pos0
     local highlight_pos1 = sel and sel.pos1
-    local context     = clean_str(
-        get_selection_in_context(ui.document, highlighted, 10),
-        MAX_HL
-    )
+    local highlight_text = clean_str(highlighted, MAX_HL)
 
     local already_highlighted = false
     local anns = (ui.annotation and ui.annotation.annotations) or {}
@@ -423,7 +421,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
         -- Transient provider errors (429/5xx) are retried inside
         -- CardGenerator.call_llm with backoff, so handle the result directly.
         local card, err = CardGenerator.generate(
-            CONFIGURATION, phrase, context, title, author, chosen_model
+            CONFIGURATION, phrase, highlight_text, title, author, chosen_model
         )
         if not card then
             UIManager:show(InfoMessage:new {
@@ -438,7 +436,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
         apply_card_source(card, title, author, ui)
         card.highlight_pos0 = highlight_pos0
         card.highlight_pos1 = highlight_pos1
-        card._context       = context
+        card._context       = highlight_text
         card.model          = chosen_model
         card.target_model   = chosen_model
         CardFields.normalize(card, CONFIGURATION)
@@ -488,7 +486,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
                     end
                     UiBusy.run(_("Regenerating…"), function()
                         local new_card, new_err = CardGenerator.generate(
-                            CONFIGURATION, phrase, context, title, author,
+                            CONFIGURATION, phrase, highlight_text, title, author,
                             c.model or generate_model
                         )
                         if not new_card then
@@ -504,7 +502,7 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
                         apply_card_source(new_card, title, author, ui)
                         new_card.highlight_pos0 = highlight_pos0
                         new_card.highlight_pos1 = highlight_pos1
-                        new_card._context       = context
+                        new_card._context       = highlight_text
                         new_card.model          = c.model or generate_model
                         new_card.target_model   = new_card.model
                         CardStorage.save_or_update(new_card)
@@ -544,17 +542,30 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
             return v
         end
 
-        if anki_cfg.send_on_save then
-            SendFlow.prompt_and_send(anki_cfg, card, function(ok, _err)
+        local function finish_card_send(card)
+            local default_deck = CardDefaults.wiki_deck(CONFIGURATION)
+            if default_deck then
+                card.target_deck = default_deck
+            end
+            if CardDefaults.auto_send_wiki(CONFIGURATION) then
+                SendFlow.quick_send(anki_cfg, card, function(ok, _err)
+                    release_highlight_for_reading(highlight_module)
+                    if ok then
+                        UIManager:show(Notification:new {
+                            text    = _("Wiki card sent to Anki"),
+                            timeout = 4,
+                        })
+                    else
+                        open_viewer(card, false)
+                    end
+                end, { ui = ui, use_configured_deck = true })
+            else
                 release_highlight_for_reading(highlight_module)
-                if not ok then
-                    open_viewer(card, false)
-                end
-            end, { ui = ui })
-        else
-            release_highlight_for_reading(highlight_module)
-            open_viewer(card, false)
+                open_viewer(card, false)
+            end
         end
+
+        finish_card_send(card)
     end
 
     local function begin_generation(chosen_model)
@@ -566,22 +577,26 @@ local function run_wiki_card_flow(hl, ctx, ui, flow_opts)
         end)
     end
 
-    NoteTypePicker.show(anki_cfg, function(chosen_model)
-        begin_generation(chosen_model)
-    end, {
-        current_model = default_model,
-        title         = _("Choose note type (Wiki Card)"),
-        parent_fn     = flow_opts.parent_fn,
-        profile_filter = "wiki",
-        info_text     = _(
-            "Wiki Card (AI): term on front, Wikipedia-style article + links on back. "
-            .. "Default Anki note type: Wiki Card. See docs/anki-vocabulary.md."),
-        readme_id     = "wiki",
-        fallback_models = {
-            NoteTypeProfiles.DEFAULT_MODEL,
-            "Basic",
-        },
-    })
+    if CardDefaults.auto_send_wiki(CONFIGURATION) then
+        begin_generation(CardDefaults.wiki_model(CONFIGURATION))
+    else
+        NoteTypePicker.show(anki_cfg, function(chosen_model)
+            begin_generation(chosen_model)
+        end, {
+            current_model = default_model,
+            title         = _("Choose note type (Wiki Card)"),
+            parent_fn     = flow_opts.parent_fn,
+            profile_filter = "wiki",
+            info_text     = _(
+                "Wiki Card (AI): term on front, Wikipedia-style article + links on back. "
+                .. "Default Anki note type: Wiki Card. See docs/anki-vocabulary.md."),
+            readme_id     = "wiki",
+            fallback_models = {
+                NoteTypeProfiles.DEFAULT_MODEL,
+                "Basic",
+            },
+        })
+    end
 end
 
 -- ── Vocabulary Card flow (KOReader dictionary only, no AI) ──────────────────
@@ -674,13 +689,6 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
         end
         HighlightStatus.mark_saved(ui, highlight_pos0, highlight_pos1)
 
-        if not anki_cfg.send_on_save then
-            UIManager:show(Notification:new {
-                text    = _("Saved locally. Send from My Cards when Anki is available."),
-                timeout = 4,
-            })
-        end
-
         local viewer_ref = {}
         local lookup_word = phrase
 
@@ -752,15 +760,34 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
             return v
         end
 
-        if anki_cfg.send_on_save then
-            SendFlow.prompt_and_send(anki_cfg, card, function(ok, _err)
-                if not ok then
-                    viewer_ref[1] = make_viewer(card, false)
-                end
-            end, { ui = ui })
-        else
-            viewer_ref[1] = make_viewer(card, false)
+        local function finish_vocab_send(card)
+            local default_deck = CardDefaults.vocabulary_deck(CONFIGURATION)
+            if default_deck then
+                card.target_deck = default_deck
+            end
+            if CardDefaults.auto_send_vocabulary(CONFIGURATION) then
+                SendFlow.quick_send(anki_cfg, card, function(ok, _err)
+                    release_highlight_for_reading(highlight_module)
+                    if ok then
+                        UIManager:show(Notification:new {
+                            text    = _("Vocabulary card sent to Anki"),
+                            timeout = 4,
+                        })
+                    else
+                        viewer_ref[1] = make_viewer(card, false)
+                    end
+                end, { ui = ui, use_configured_deck = true })
+            else
+                release_highlight_for_reading(highlight_module)
+                UIManager:show(Notification:new {
+                    text    = _("Saved locally. Send from My Cards when Anki is available."),
+                    timeout = 4,
+                })
+                viewer_ref[1] = make_viewer(card, false)
+            end
         end
+
+        finish_vocab_send(card)
     end
 
     local function begin_lookup(chosen_model)
@@ -778,36 +805,46 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
         UIManager:show(loading)
         UIManager:scheduleIn(0.05, function()
             UIManager:close(loading)
+            local pick_opts = {
+                preferred_dictionary = CardDefaults.vocabulary_dictionary(CONFIGURATION),
+                auto_pick = CardDefaults.auto_send_vocabulary(CONFIGURATION),
+                parent_fn = flow_opts.parent_fn,
+            }
             local ok, err = DictionaryLookup.pick(ui, phrase, function(lookup)
                 open_dictionary_card(chosen_model, lookup)
-            end)
+            end, pick_opts)
             if ok == nil then
                 UIManager:show(InfoMessage:new {
                     text    = _("Dictionary lookup failed: ") .. (err or "unknown"),
                     timeout = 5,
                 })
+                if flow_opts.parent_fn then flow_opts.parent_fn() end
             end
         end)
     end
 
-    NoteTypePicker.show(anki_cfg, function(chosen_model)
-        begin_lookup(chosen_model)
-    end, {
-        current_model = default_model,
-        title         = _("Choose note type (Vocabulary Card)"),
-        parent_fn     = flow_opts.parent_fn,
-        profile_filter = "vocabulary",
-        info_text     = _(
-            "Vocabulary Card (No AI): uses KOReader dictionary only. "
-            .. "Pick any note type — the word, definition, passage and source "
-            .. "are mapped onto its fields by name (e.g. Front/Back also works). "
-            .. "See docs/anki-vocabulary-card.md."),
-        readme_id     = "vocabulary",
-        fallback_models = {
-            NoteTypeProfiles.VOCABULARY_CARD_MODEL,
-            "Basic",
-        },
-    })
+    if CardDefaults.auto_send_vocabulary(CONFIGURATION) then
+        begin_lookup(CardDefaults.vocabulary_model(CONFIGURATION))
+    else
+        NoteTypePicker.show(anki_cfg, function(chosen_model)
+            begin_lookup(chosen_model)
+        end, {
+            current_model = default_model,
+            title         = _("Choose note type (Vocabulary Card)"),
+            parent_fn     = flow_opts.parent_fn,
+            profile_filter = "vocabulary",
+            info_text     = _(
+                "Vocabulary Card (No AI): uses KOReader dictionary only. "
+                .. "Pick any note type — the word, definition, passage and source "
+                .. "are mapped onto its fields by name (e.g. Front/Back also works). "
+                .. "See docs/anki-vocabulary-card.md."),
+            readme_id     = "vocabulary",
+            fallback_models = {
+                NoteTypeProfiles.VOCABULARY_CARD_MODEL,
+                "Basic",
+            },
+        })
+    end
 end
 
 local function run_memorization_flow(hl, ctx, ui, flow_opts)
@@ -815,7 +852,10 @@ local function run_memorization_flow(hl, ctx, ui, flow_opts)
     ctx = ctx or {}
     local highlight_module = ui.highlight
     local highlighted = ctx.text or get_highlight_text(highlight_module, ctx.index)
-    local text = clean_str(highlighted, MAX_HL)
+    local text = PoetryMemorize.extract_selection_text(ui, {
+        text          = highlighted,
+        selected_text = ctx.selected_text,
+    }, MAX_HL)
     if text == "" then
         UIManager:show(InfoMessage:new {
             text    = _("Select text to memorize (sentence, stanza, or passage)."),
@@ -902,6 +942,24 @@ function AnkiKOAi:init()
                             release_highlight_for_reading(hl)
                         end,
                     })
+                end)
+            end,
+        }
+    end)
+
+    self.ui.highlight:addToHighlightDialog(PluginConstants.ID .. "_memorize", function(hl, index)
+        return {
+            text    = _("Memorize"),
+            enabled = true,
+            show_in_highlight_dialog_func = function()
+                return CardDefaults.quick_highlight_button(CONFIGURATION)
+            end,
+            callback = function()
+                local ctx = capture_highlight_context(hl, index)
+                dismiss_highlight_dialog(hl)
+                release_highlight_for_reading(hl)
+                UIManager:scheduleIn(0.05, function()
+                    run_memorization_flow(hl, ctx, self.ui, {})
                 end)
             end,
         }

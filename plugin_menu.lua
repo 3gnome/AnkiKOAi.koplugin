@@ -7,6 +7,7 @@ local _          = require("gettext")
 
 local CardManager     = require("card_manager")
 local CardStorage     = require("card_storage")
+local CardDefaults    = require("card_defaults")
 local PluginConstants = require("plugin_constants")
 local Nav             = require("nav")
 
@@ -107,6 +108,24 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
         }
     end
 
+    local function add_card_hub_entry(items, label, readme_id, card_kind, on_action)
+        if CardDefaults.should_flatten_hub(config, card_kind) then
+            table.insert(items, {
+                text     = _(label),
+                bold     = true,
+                callback = function()
+                    open_child(on_action)
+                end,
+            })
+        else
+            table.insert(items, {
+                text           = _(label),
+                bold           = true,
+                sub_item_table = card_submenu(readme_id, _("Create ") .. _(label), on_action),
+            })
+        end
+    end
+
     local items = {
         {
             text     = _("← Back"),
@@ -116,47 +135,25 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
             end,
         },
         section_label(_("Create from highlight")),
-        {
-            text           = _(PluginConstants.WIKI_CARD_LABEL),
-            bold           = true,
-            sub_item_table = card_submenu(
-                "wiki",
-                _("Create Wiki Card"),
-                function()
-                    if actions.on_wiki_card then
-                        actions.on_wiki_card(reopen_hub)
-                    end
-                end
-            ),
-        },
-        {
-            text           = _(PluginConstants.VOCABULARY_CARD_LABEL),
-            bold           = true,
-            sub_item_table = card_submenu(
-                "vocabulary",
-                _("Create Vocabulary Card"),
-                function()
-                    if actions.on_vocabulary_card then
-                        actions.on_vocabulary_card(reopen_hub)
-                    end
-                end
-            ),
-        },
-        {
-            text           = _(PluginConstants.MEMORIZATION_CARD_LABEL),
-            bold           = true,
-            sub_item_table = card_submenu(
-                "memorization",
-                _("Create Memorization Card"),
-                function()
-                    if actions.on_memorization then
-                        actions.on_memorization(reopen_hub)
-                    end
-                end
-            ),
-        },
-        section_label(_("Library & batch")),
     }
+
+    add_card_hub_entry(items, PluginConstants.WIKI_CARD_LABEL, "wiki", "wiki", function()
+        if actions.on_wiki_card then
+            actions.on_wiki_card(reopen_hub)
+        end
+    end)
+    add_card_hub_entry(items, PluginConstants.VOCABULARY_CARD_LABEL, "vocabulary", "vocabulary", function()
+        if actions.on_vocabulary_card then
+            actions.on_vocabulary_card(reopen_hub)
+        end
+    end)
+    add_card_hub_entry(items, PluginConstants.MEMORIZATION_CARD_LABEL, "memorization", "memorization", function()
+        if actions.on_memorization then
+            actions.on_memorization(reopen_hub)
+        end
+    end)
+
+    table.insert(items, section_label(_("Library & batch")))
     local unsent = CardStorage.count_unsent()
     if unsent > 0 then
         table.insert(items, {
@@ -174,17 +171,17 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
         })
     end
     table.insert(items, {
-            text     = _("My Cards"),
-            bold     = true,
-            callback = function()
-                open_child(function()
-                    CardManager.show(config, book_title, ui, {
-                        on_back    = reopen_hub,
-                        back_label = _("← Back to AnkiKOAi"),
-                    })
-                end)
-            end,
-        })
+        text     = _("My Cards"),
+        bold     = true,
+        callback = function()
+            open_child(function()
+                CardManager.show(config, book_title, ui, {
+                    on_back    = reopen_hub,
+                    back_label = _("← Back to AnkiKOAi"),
+                })
+            end)
+        end,
+    })
     table.insert(items, {
         text     = _("Highlights and Cards"),
         bold     = true,

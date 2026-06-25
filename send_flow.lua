@@ -6,6 +6,7 @@ local UIManager      = require("ui/uimanager")
 local _              = require("gettext")
 
 local AnkiSync         = require("anki_sync")
+local CardDefaults     = require("card_defaults")
 local CardStorage      = require("card_storage")
 local DeckPicker       = require("deck_picker")
 local HighlightStatus  = require("highlight_status")
@@ -46,8 +47,23 @@ function SendFlow.remember_send(config, deck, model)
     CardStorage.save_anki_settings(config)
 end
 
-function SendFlow.can_quick_send(config)
-    local deck = config.last_send_deck or config.deck
+-- use_configured_deck: prefer card.target_deck and per-type Card defaults.
+-- Default (viewer quick-send): prefer last_send_deck for repeat manual sends.
+function SendFlow.resolve_deck(config, card, opts)
+    opts = opts or {}
+    config = config or {}
+    if card and card.target_deck and card.target_deck ~= "" then
+        return card.target_deck
+    end
+    local configured = CardDefaults.deck_for_card({ anki = config }, card)
+    if opts.use_configured_deck then
+        return configured
+    end
+    return config.last_send_deck or configured
+end
+
+function SendFlow.can_quick_send(config, card, opts)
+    local deck = SendFlow.resolve_deck(config, card, opts)
     return deck and deck ~= ""
 end
 
@@ -82,7 +98,7 @@ function SendFlow.execute_send(config, card, deck, model, ui, done, opts)
     opts = opts or {}
     config = config or {}
     model = model or SendFlow.effective_model(config, card)
-    deck = deck or config.last_send_deck or config.deck
+    deck = deck or SendFlow.resolve_deck(config, card, opts)
 
     if not deck or deck == "" then
         if done then done(nil, _("No deck selected")) end
@@ -146,8 +162,8 @@ end
 
 function SendFlow.quick_send(config, card, done, opts)
     opts = opts or {}
-    local deck = config.last_send_deck or config.deck
-    if not SendFlow.can_quick_send(config) then
+    local deck = SendFlow.resolve_deck(config, card, opts)
+    if not SendFlow.can_quick_send(config, card, opts) then
         SendFlow.prompt_and_send(config, card, done, opts)
         return
     end
@@ -160,7 +176,7 @@ end
 function SendFlow.viewer_callbacks(config, card, ui)
     config = config or {}
     return {
-        can_quick_send = SendFlow.can_quick_send(config),
+        can_quick_send = SendFlow.can_quick_send(config, card),
         on_send = function(done)
             SendFlow.prompt_and_send(config, card, done, { ui = ui })
         end,

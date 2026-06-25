@@ -222,16 +222,41 @@ function DictionaryLookup.show_picker(entries, lookup_word, on_select, opts)
 end
 
 -- Look up word; if multiple dictionary hits, let the user pick one.
+-- opts.preferred_dictionary — prefer entries from this StarDict name
+-- opts.auto_pick — when true, use preferred/first entry without showing the menu
 function DictionaryLookup.pick(ui, word, on_select, opts)
     opts = opts or {}
     local entries, err = run_lookup(ui, word)
     if not entries then
         return nil, err
     end
-    if #entries == 1 and not opts.always_pick then
+
+    local preferred = opts.preferred_dictionary
+    if preferred and preferred ~= "" then
+        local filtered = {}
+        for _i, entry in ipairs(entries) do
+            if entry.dict == preferred then
+                table.insert(filtered, entry)
+            end
+        end
+        if #filtered > 0 then
+            entries = filtered
+        end
+    end
+
+    if #entries == 1 and not opts.always_pick and not opts.auto_pick then
         if on_select then on_select(entries[1]) end
         return entries[1]
     end
+
+    if opts.auto_pick and #entries > 0 then
+        local no_preferred = not preferred or preferred == ""
+        if not (no_preferred and #entries > 1) then
+            if on_select then on_select(entries[1]) end
+            return entries[1]
+        end
+    end
+
     DictionaryLookup.show_picker(entries, word, on_select, opts)
     return true
 end

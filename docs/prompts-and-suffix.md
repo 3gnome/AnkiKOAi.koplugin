@@ -15,7 +15,7 @@ On your e-reader, tap **View README** in that submenu for a short summary (`docs
 | Control | Purpose |
 |---------|---------|
 | **Prompt suffix** | Extra instructions appended to every generate and regen prompt |
-| **Note type** | Which Anki model’s prompts you edit or preview |
+| **Note type for prompts** | Which Anki model’s prompts you edit or preview (default note types live under **Card defaults**) |
 | **Generate prompt** | Full template override for new card creation |
 | **Regen prompt** | Template override for “Regenerate broader context” |
 | **Preview generate / regen** | Shows the assembled prompt (sample highlight data) |
@@ -54,7 +54,7 @@ Leave a field empty to fall back to the built-in profile:
 - **Information** note types (Wiki Card): JSON schema prompt for `Phrase`, `Text`, `Definition`, optional `IPA`; plugin fills `Links` and `Source`
 - **Basic** / **generic**: simpler front/back JSON prompts
 
-When you change the default wiki note type in Settings, existing custom prompts are **migrated** from the old name to the new one when possible.
+When you change the default wiki note type under **Settings → Card defaults → Wiki Card**, existing custom prompts are **migrated** from the old name to the new one when possible.
 
 ---
 

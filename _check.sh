@@ -1,7 +1,8 @@
 #!/bin/bash
-# Temporary syntax/sanity checker (not part of the plugin).
-KO="$HOME/koreader-dev/emulator/usr/lib/koreader"
-SRC="/mnt/c/Users/small/AnkiKOAi.koplugin"
+# Dev-only syntax/sanity checker (not part of the plugin).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KO="${KOREADER_DIR:-$HOME/koreader-dev/emulator/usr/lib/koreader}"
+SRC="${PLUGIN_DIR:-$SCRIPT_DIR}"
 LJ="$KO/luajit"
 fail=0
 

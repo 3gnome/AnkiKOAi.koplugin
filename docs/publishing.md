@@ -29,7 +29,7 @@ While reading on an e-reader, highlight a word, phrase, or passage and choose:
 - **AnkiKOAi** — AI builds a *Wiki Card* (term on front; Wikipedia-style article + explore links on back) and sends it to your Anki deck over Wi‑Fi. Dictionary-only *Vocabulary Cards* need no AI.
 - **Memorization** — LPCG-style overlapping *step* cards plus an optional *full recitation* card for poetry and prose, synced into `Memorize::Book::page` subdecks.
 
-The plugin talks to [AnkiConnect](https://foosoft.net/projects/anki-connect/) on a PC on the same network. Settings (API keys, decks, note types) are editable on the device — no SSH or file editing required on Kobo.
+The plugin talks to [AnkiConnect](https://foosoft.net/projects/anki-connect/) on a PC on the same network. **Card defaults**, API keys, decks, note types, and one-tap send are editable on the device — no SSH or file editing required on Kobo.
 
 **Requirements:** KOReader, Anki + AnkiConnect on a PC, an AI API key for Wiki Cards (DashScope, Gemini, OpenAI, or OpenRouter), StarDict dictionaries for Vocabulary Cards, and matching Anki note types (*Wiki Card*, *Vocabulary Card*, and *Memorization*).
 

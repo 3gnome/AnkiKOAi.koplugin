@@ -7,7 +7,12 @@ configuration.lua
 
 # Dev / emulator logs
 koreader.log
+koreader-emulator.log
 *.log
+debug-*.log
+
+# Local Cursor / machine-specific dev context (see LOCAL_DEV.md.sample)
+LOCAL_DEV.md
 
 # KOReader per-book sidecar metadata (created when opening a test book)
 *.sdr/

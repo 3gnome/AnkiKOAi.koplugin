@@ -19,13 +19,34 @@ Title, Context, Target, FullText, Source, LineIndex, FullRecite
 
 Parent deck: **Memorize** → plugin creates `Memorize::Book title::page`.
 
-Set **Parent deck** to `Memorize` in plugin Settings → Memorization.
+Set **Parent deck** under **Settings → Card defaults → Memorization Card** (pick from Anki).
 
-## Plugin settings (defaults)
+Memorization subdecks (`Memorize::Book::page`) are created automatically; that is separate from **Send routing** (used for Wiki/Vocabulary subdeck-by-book).
 
-- Context lines: 3
+## Plugin settings
+
+### Card defaults (note type, deck, one-tap send)
+
+- **Note type** — default: Memorization (pick from Anki)
+- **Parent deck** — default: Memorize (pick from Anki)
+- **One-tap send (Memorization)** — skip intro and confirmation; send immediately
+- **Quick highlight button** — add “Memorize” on the highlight menu (skips AnkiKOAi hub)
+- **Skip hub submenu when auto-send** — one tap on Memorization Card in the hub when one-tap send is ON
+
+### Memorization options (behavior)
+
+- Context lines: 3 (up to 20; rolling window when cumulative is OFF)
+- Cumulative context: OFF (ON = show all prior lines on each step)
 - Max words per chunk: 7
 - Full recitation card: ON
+
+Optional (OFF by default):
+
+- Force verse line split — one step per line even without auto-detect
+- Show step preview on send — list each chunk before sending
+- Replace existing cards — delete notes in the target deck before send
+- Merge batch highlights — combine multiple inbox selections into one passage
+- Auto-save if send fails — queue locally when one-tap send cannot reach Anki
 
 ## Templates and CSS
 

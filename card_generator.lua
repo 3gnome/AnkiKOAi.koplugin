@@ -167,6 +167,18 @@ local function wiki_block(sources)
     return ""
 end
 
+local function apply_wiki_highlight(card, highlight_text, field_names)
+    highlight_text = highlight_text or ""
+    card.definition = highlight_text
+    card._context = highlight_text
+    card.anki_fields = card.anki_fields or {}
+    for _, fname in ipairs(field_names or {}) do
+        if fname:lower() == "definition" then
+            card.anki_fields[fname] = highlight_text
+        end
+    end
+end
+
 local function field_names_for_model(config, model_name)
     local names = NoteTypePicker.fetch_field_names(config, model_name)
     if names and #names > 0 then return names end
@@ -179,25 +191,28 @@ local function field_names_for_model(config, model_name)
     return { "Front", "Back" }
 end
 
-function CardGenerator.generate(config, phrase, context, title, author, model_name)
+function CardGenerator.generate(config, phrase, highlight, title, author, model_name)
     local eff = CardFields.effective_config(config)
     model_name = NoteTypeProfiles.normalize_model_name(
         model_name or CardFields.default_wiki_model(config))
     eff.model = model_name
     local field_names = field_names_for_model(eff, model_name)
     local fetch_opts = { title = title, author = author }
+    local highlight_text = highlight or phrase or ""
     UiBusy.pulse(_("Fetching reference sources…"))
     local sources = WikiSources.fetch(eff, phrase, fetch_opts)
     local has_wiki = WikiSources.has_content(sources)
 
+    local highlight_esc = escape_for_prompt(highlight_text)
     local prompt = PromptBuilder.build_generate(eff, model_name, field_names, {
-        language  = eff.target_language or "English",
-        title     = escape_for_prompt(title or "Unknown"),
-        author    = escape_for_prompt(author or "Unknown"),
-        phrase    = escape_for_prompt(phrase or ""),
-        context   = escape_for_prompt(context or ""),
+        language   = eff.target_language or "English",
+        title      = escape_for_prompt(title or "Unknown"),
+        author     = escape_for_prompt(author or "Unknown"),
+        phrase     = escape_for_prompt(phrase or ""),
+        highlight  = highlight_esc,
+        context    = highlight_esc,
         wiki_block = wiki_block(sources),
-        has_wiki  = has_wiki,
+        has_wiki   = has_wiki,
     })
 
     UiBusy.pulse(_("Generating article…"))
@@ -207,11 +222,12 @@ function CardGenerator.generate(config, phrase, context, title, author, model_na
     if not llm_data then return nil, parse_err end
 
     local card = {
-        phrase  = phrase,
-        model   = model_name,
-        _context = context,
+        phrase   = phrase,
+        model    = model_name,
+        _context = highlight_text,
     }
     CardFields.apply_llm_fields(card, field_names, llm_data)
+    apply_wiki_highlight(card, highlight_text, field_names)
 
     card._wiki_sources = sources
     if NoteTypeProfiles.is_wiki_card(model_name) and WikiSources.is_enabled(eff) then
@@ -235,12 +251,16 @@ function CardGenerator.generate_text(config, phrase, card)
     end
     local has_wiki = WikiSources.has_content(sources)
 
+    local highlight_text = card._context or card.definition or phrase or ""
+    local highlight_esc = escape_for_prompt(highlight_text)
+
     local prompt = PromptBuilder.build_text_regen(eff, model_name, {
         title      = escape_for_prompt(card.book_title or "Unknown"),
         author     = escape_for_prompt(card.book_author or "Unknown"),
         phrase     = escape_for_prompt(phrase or ""),
-        context    = escape_for_prompt(card._context or ""),
-        definition = escape_for_prompt(card.definition or ""),
+        highlight  = highlight_esc,
+        context    = highlight_esc,
+        definition = highlight_esc,
         wiki_block = wiki_block(sources),
         has_wiki   = has_wiki,
     })

@@ -182,23 +182,29 @@ Wiki Cards are content-heavy — higher daily limits than memorization step card
 
 ## 7. Plugin settings (must match Anki)
 
-| Setting | Default | Notes |
-|---------|---------|-------|
-| Note type | Wiki Card | Must match Anki note type name |
-| Deck | English::Koreader | Must exist or AnkiConnect creates it |
-| Tags | KOReader | Comma-separated in Settings |
-| Subdeck by book title | ON | `Parent::Book Title` |
-| Wiki sources for AI | ON | Wikipedia/Wiktionary excerpts ground the article |
-| Sync to AnkiWeb after send | ON | Requires AnkiWeb account on desktop |
-| Send to Anki after generate | OFF | When ON, skips manual review step |
+Configure on device under **AnkiKOAi → Settings → Card defaults**:
+
+| Setting | Default | Menu path |
+|---------|---------|-----------|
+| Note type | Wiki Card | Card defaults → Wiki Card… |
+| Default deck | English::Koreader | Card defaults → Wiki Card… |
+| One-tap send (Wiki) | OFF | Card defaults → Wiki Card… |
+| Subdeck by book title | ON | Card defaults → Send routing… |
+| Tags | KOReader | Settings → Tags… |
+| Wiki sources for AI | ON | Settings → AI Settings |
+| Sync to AnkiWeb after send | ON | Settings → Anki connection… |
+
+**One-tap send** skips the note-type picker, deck picker, and card review step — the card goes straight to your **default deck** (not the last deck you picked manually).
 
 In `configuration.lua`:
 
 ```lua
 anki = {
     url   = "http://192.168.1.100:8765",
-    deck  = "English::Koreader",
+    wiki_deck = "English::Koreader",
+    wiki_note_type = "Wiki Card",
     model = "Wiki Card",
+    auto_send_wiki = false,
     tags  = { "KOReader" },
     sync_after_send = true,
 },

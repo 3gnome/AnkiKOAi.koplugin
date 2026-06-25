@@ -10,6 +10,7 @@ local _              = require("gettext")
 local Event          = require("ui/event")
 local CardStorage    = require("card_storage")
 local AnkiSync       = require("anki_sync")
+local CardDefaults   = require("card_defaults")
 local CardGenerator  = require("card_generator")
 local CardFields     = require("card_fields")
 local CardViewer     = require("card_viewer")
@@ -85,7 +86,9 @@ local function send_memorization_card(anki_config, base_config, card, send_ui, d
     PoetryMemorize.send_highlight(base_config, card.memorization_text, send_ui, meta,
         function(ok, err_or_msg, info)
             if ok then
-                local deck = (info and info.deck) or meta.deck or anki_config.deck or ""
+                local deck = (info and info.deck) or meta.deck
+                    or CardDefaults.memorization_parent_deck({ anki = anki_config })
+                    or ""
                 CardStorage.mark_sent_memorization(card.memorization_text, deck)
                 if not quiet then notify(err_or_msg or _("Sent!")) end
             else
@@ -137,7 +140,7 @@ function CardManager.send_all_unsent(base_config, ui, opts)
             and card.target_deck
             or AnkiSync.resolve_base_deck(anki_config, card)
             or anki_config.last_send_deck
-            or anki_config.deck
+            or CardDefaults.deck_for_card({ anki = anki_config }, card)
         if not deck or deck == "" then
             failed = failed + 1
         else

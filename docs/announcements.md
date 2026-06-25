@@ -82,8 +82,8 @@ Long-press a word or highlight a passage → pick a card type:
 - Vocabulary Card (no AI): dictionary definition + passage
 - Memorization (no AI): LPCG-style step cards + full recitation for poetry/prose
 
-On-device settings, optional AnkiWeb auto-sync, multiple AI providers, AI fully
-optional. Works on Kobo, Kindle, and the emulator.
+On-device settings (Card defaults, one-tap send per card type, AI providers),
+optional AnkiWeb auto-sync. Works on Kobo, Kindle, and the emulator.
 
 Repo + getting started: LINK
 
@@ -102,8 +102,8 @@ I'd like to share AnkiKOAi, a plugin that turns highlights into Anki cards.
 
 Long-press a word or highlight a passage and choose Wiki Card (AI), Vocabulary
 Card (dictionary, no AI), or Memorization (LPCG-style, no AI). Cards are sent to
-desktop Anki via AnkiConnect, with optional AnkiWeb sync. Settings are on-device;
-AI is optional (DashScope/Gemini/OpenAI/OpenRouter).
+desktop Anki via AnkiConnect, with optional AnkiWeb sync. Card defaults and
+one-tap send are configurable on-device; AI is optional (DashScope/Gemini/OpenAI/OpenRouter).
 
 Repo: LINK
 Getting started: LINK#getting-started (see docs/getting-started.md)

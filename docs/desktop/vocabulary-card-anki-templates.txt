@@ -205,7 +205,11 @@ PART 4 — STYLING
 PART 5 — DECK (suggested)
 ================================================================================
 Create deck:  English::Koreader
-Plugin Settings → Vocabulary note type:  Vocabulary Card
+
+Plugin settings (on device):
+  Settings → Card defaults → Vocabulary Card → Default deck
+  Settings → Card defaults → Vocabulary Card → Note type: Vocabulary Card
+  Optional: Preferred dictionary, One-tap send (Vocabulary)
 
 Suggested deck-options preset:  Vocabulary Card (or reuse Wiki Card preset)
 

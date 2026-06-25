@@ -12,11 +12,11 @@ Examples: always include etymology, prefer British spelling, keep definitions un
 
 Leave empty to use the built-in defaults only.
 
-## Note type
+## Note type for prompts
 
-Pick which Anki note type you are editing. Prompts are stored **per note type** (e.g. Wiki Card vs a custom clone).
+Pick which Anki note type you are editing (**Note type for prompts**). Prompts are stored **per note type** (e.g. Wiki Card vs a custom clone).
 
-Changing your default wiki note type in Settings may copy prompts from the old type to the new one.
+Default wiki note types are set under **Settings → Card defaults → Wiki Card**. Changing that default may copy custom prompts from the old type to the new one.
 
 ## Generate prompt
 

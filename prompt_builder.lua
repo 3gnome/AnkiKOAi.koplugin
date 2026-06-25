@@ -142,8 +142,9 @@ function PromptBuilder.sample_preview_vars(config)
         title      = "Example Book",
         author     = "Example Author",
         phrase     = "serendipity",
-        context    = "...a moment of serendipity changed everything...",
-        definition = "pleasant surprise; accidental discovery",
+        highlight  = "a moment of serendipity",
+        context    = "a moment of serendipity",
+        definition = "a moment of serendipity",
         wiki_block = "",
         has_wiki   = false,
     }

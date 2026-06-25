@@ -118,7 +118,7 @@ function NoteTypeProfiles.field_hint(field_name)
         return "the highlighted term exactly (shown alone on the card front)"
     end
     if n == "definition" or n == "meaning" then
-        return "optional one-sentence lede; leave empty if the Text opening is enough"
+        return "leave empty — the plugin copies the reader's highlight verbatim"
     end
     if n == "ipa" or n == "pronunciation" then
         return "leave empty unless pronunciation is clearly relevant"
@@ -127,13 +127,13 @@ function NoteTypeProfiles.field_hint(field_name)
         return "leave empty — related topics go in Links (added by the plugin)"
     end
     if n == "text" or n == "article" or n == "notes" or n == "extra" then
-        return "Wikipedia-style article (150–250 words): meaning in this passage, then broader encyclopedic context; plain text paragraphs"
+        return "150–250 word exploration of the term/person/idea itself; deeper than Definition; no callbacks to the book or author"
     end
     if n == "links" or n == "urls" or n == "relatedlinks" then
         return "leave empty — real Wikipedia URLs are added by the plugin"
     end
     if n == "context" then
-        return "same as Text — encyclopedic article with passage context"
+        return "same role as Text — standalone exploration, not a passage recap"
     end
     if n == "source" or n == "reference" then
         return "leave empty — filled by the plugin when possible"
@@ -152,26 +152,28 @@ function NoteTypeProfiles.build_json_schema(field_names)
 end
 
 -- Bundled prompt bodies (without accuracy/wiki blocks).
-NoteTypeProfiles.INFORMATION_PROMPT = [[You are writing the back of a Wiki Card for a term the reader highlighted while reading.
+NoteTypeProfiles.INFORMATION_PROMPT = [[You are writing the back of a Wiki Card for text the reader highlighted while reading.
 
-Book: "{title}" by {author}
-Highlighted term: "{phrase}"
+Highlighted text (your only source — do not invent surrounding passage):
+"{highlight}"
+
 Language for your reply: {language}
-Surrounding passage: "...{context}..."
 
 {wiki_block}If the highlight is a multi-word phrase, treat the whole phrase as the unit of meaning.
 
-Goal: a concise Wikipedia-style encyclopedia article the reader studies on the back of the card. The card front shows only the term.
+Goal: help the reader explore what they highlighted. The card front shows only the term; the plugin displays the highlight itself separately on the back.
 
 Task:
-1. Explain what "{phrase}" means in THIS passage, then in general.
-2. Add encyclopedic background: subject area, history, connections to the book's themes.
-3. Write in neutral, readable prose (short paragraphs). No bullet lists of URLs.
+1. Decide what the highlight refers to (word, person, place, poem line, allusion, concept, etc.).
+2. Text — 150–250 words exploring that subject: who or what it is, etymology or history, cultural or literary significance, related ideas worth knowing. Write as standalone exposition. Do NOT name the book, author, or chapter. Do NOT quote or summarize text outside the highlight.
+3. The reader's exact highlight is shown on the card by the plugin — do not repeat it in Text.
+
+Style: neutral, readable prose (short paragraphs). No bullet lists of URLs.
 
 Field rules:
-- "Phrase": the highlighted term in canonical form (matches the front).
-- "Text": the full article (150–250 words). Plain text; separate paragraphs with a blank line.
-- "Definition": optional one-sentence opening; leave empty if Text already opens well.
+- "Phrase": a short canonical label for the card front (usually the key term from the highlight).
+- "Definition": leave empty — the plugin fills this with the reader's highlight.
+- "Text": exploration article (150–250 words). Plain text; separate paragraphs with a blank line.
 - "Links", "Source", "IPA", "Synonyms": leave empty — the plugin fills Links and Source.
 
 {custom_suffix}
@@ -211,19 +213,18 @@ Passage: "...{context}..."
 Return valid JSON only:
 {json_schema}]]
 
-NoteTypeProfiles.TEXT_REGEN_INFORMATION = [[Regenerate the "Text" field (Wikipedia-style article) for a Wiki Card.
+NoteTypeProfiles.TEXT_REGEN_INFORMATION = [[Regenerate the "Text" field for a Wiki Card.
 
-Book: "{title}" by {author}
-Term: "{phrase}"
+Highlighted text (only source — do not invent surrounding passage):
+"{highlight}"
+
 Language: {language}
-Passage: "...{context}..."
-Current definition/lede: "{definition}"
 
-{wiki_block}Write a fresh encyclopedia-style article (150–250 words): meaning in the passage, then broader context. Plain text paragraphs.
+{wiki_block}Write a fresh exploration article (150–250 words) of the subject in the highlight — who or what it is, why it matters, historical or cultural depth, related ideas. Do not repeat the highlight verbatim. Do not name the book or author. Plain text paragraphs.
 
 {custom_suffix}
 {accuracy_rules}
 
-Return valid JSON only: { "Text": "<article; 150–250 words>" }]]
+Return valid JSON only: { "Text": "<exploration article; 150–250 words>" }]]
 
 return NoteTypeProfiles

@@ -188,7 +188,7 @@ Paste into **Cards → Styling** (both card types share this):
 
    Book title is the middle level; the leaf is page/chapter only (not repeated).
 
-3. In plugin Settings → **Memorization**, set **Parent deck** to `Memorize`.
+3. In plugin **Settings → Card defaults → Memorization Card**, set **Parent deck** to `Memorize`.
 
 ---
 
@@ -252,34 +252,60 @@ Browse search: `tag:memorization::full`
 
 ## 10. Plugin settings (Memorization)
 
-**Settings → Memorization** (or `configuration.lua` → `memorize`):
+Settings are split between **Card defaults** (where cards go) and **Memorization options** (how text is split).
+
+### Card defaults → Memorization Card
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| Note type | Memorization | Must match Anki |
+| Parent deck | Memorize | Top-level deck; subdecks auto-created |
+| One-tap send (Memorization) | OFF | Skip intro/confirm; send immediately |
+| Quick highlight button | OFF | “Memorize” on highlight menu (skips hub) |
+| Skip hub submenu when auto-send | OFF | One tap on Memorization in hub when one-tap send is ON |
+
+### Memorization options (behavior)
 
 | Setting | Default | Tuning |
 |---------|---------|--------|
-| Context lines | 3 | 4 for poetry; 2–3 for prose |
+| Context lines | 3 | 4 for poetry; 2–20 available |
+| Cumulative context | OFF | ON = show all prior lines on each step |
 | Max words per chunk | 7 | 6–8 for prose paragraphs |
 | Full recitation card | ON | OFF to skip full card |
-| Parent deck | Memorize | Must match Anki |
-| Note type | Memorization | Must match Anki |
+| Force verse line split | OFF | One step per line |
+| Show step preview on send | OFF | List chunks before send |
+| Replace existing cards | OFF | Delete notes in target deck first |
+| Merge batch highlights | OFF | Combine inbox selections into one passage |
+| Auto-save if send fails | OFF | Queue locally when one-tap send cannot reach Anki |
 
 **How text is split:**
 
 - **Poetry** (≥2 line breaks in selection): one unit per line; long lines split by word count.
 - **Prose**: split by sentences, then by word chunks if sentences are long.
 
-Duplicate warning: if the same book + page deck already has cards, the plugin warns before sending again.
+Duplicate warning: if the same book + page deck already has cards, the plugin warns before sending again (unless replace-existing is ON).
+
+`configuration.lua` → `memorize` section (behavior defaults; deck/note type also in `anki` / Card defaults):
 
 ```lua
 memorize = {
     parent_deck             = "Memorize",
     model                   = "Memorization",
     context_lines           = 3,
+    context_cumulative      = false,
     max_words_per_unit      = 7,
     auto_create_deck        = true,
     include_full_recitation = true,
+    force_verse_lines       = false,
+    show_split_preview      = false,
+    replace_duplicates      = false,
+    merge_batch             = false,
+    auto_send               = false,
     tags                    = { "KOReader", "memorization" },
 },
 ```
+
+On-device keys for Card defaults: `wiki_deck`, `vocabulary_deck`, `memorize_parent_deck`, `memorize_model`, `auto_send_memorization`, `memorize_quick_highlight_button`, `auto_send_skip_hub_submenu`. Send routing: `subdeck_by_book`, `per_book_decks`.
 
 Tags added automatically:
 

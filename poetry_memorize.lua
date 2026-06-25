@@ -13,8 +13,82 @@ local CardFields       = require("card_fields")
 local CardStorage      = require("card_storage")
 local NoteTypeProfiles = require("note_type_profiles")
 local ReadingLocation  = require("reading_location")
+local util             = require("util")
+
+local CardDefaults     = require("card_defaults")
 
 local PoetryMemorize = {}
+
+PoetryMemorize.CONTEXT_LINE_OPTIONS = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20 }
+
+local function count_newlines(s)
+    local n = 0
+    for _ in (s or ""):gmatch("\n") do n = n + 1 end
+    return n
+end
+
+-- Convert selection HTML to plain text while keeping verse/paragraph line breaks.
+local function strip_html_lines(html)
+    if not html or html == "" then return "" end
+    local text = html
+    text = text:gsub("<%s*[bB][rR]%s*/?>", "\n")
+    text = text:gsub("</%s*[pP]%s*>", "\n")
+    text = text:gsub("</%s*[dD][iI][vV]%s*>", "\n")
+    text = text:gsub("</%s*[lL][iI]%s*>", "\n")
+    text = text:gsub("</%s*[hH][1-6]%s*>", "\n")
+    text = text:gsub("<[^>]+>", " ")
+    text = text:gsub("&nbsp;", " ")
+    text = text:gsub("&amp;", "&")
+    text = text:gsub("&lt;", "<")
+    text = text:gsub("&gt;", ">")
+    text = text:gsub("&quot;", '"')
+    text = text:gsub("[ \t]+", " ")
+    text = text:gsub("\n[ \t]+", "\n")
+    text = text:gsub("[ \t]+\n", "\n")
+    text = text:gsub("\n\n\n+", "\n\n")
+    return text:match("^%s*(.-)%s*$") or ""
+end
+
+-- Preserve newlines for memorization (unlike clean_str in main.lua).
+function PoetryMemorize.prepare_text(text, max_len)
+    if not text or text == "" then return "" end
+    text = util.cleanupSelectedText(text)
+    if max_len and #text > max_len then text = text:sub(1, max_len) end
+    return text
+end
+
+-- Best-effort text for memorization: EPUB/HTML keeps verse lines; never collapse \n.
+function PoetryMemorize.extract_selection_text(ui, opts, max_len)
+    opts = opts or {}
+    local plain = opts.text or ""
+
+    local from_html = ""
+    if ui and ui.document then
+        local doc = ui.document
+        local pos0 = opts.pos0 or (opts.selected_text and opts.selected_text.pos0)
+        local pos1 = opts.pos1 or (opts.selected_text and opts.selected_text.pos1)
+        if pos0 and pos1 and doc.getHTMLFromXPointers then
+            local ok, html = pcall(function()
+                return doc:getHTMLFromXPointers(pos0, pos1, 0, true)
+            end)
+            if ok and type(html) == "string" and html ~= "" then
+                from_html = strip_html_lines(html)
+            end
+        end
+    end
+
+    local prepared_html = (from_html ~= "") and PoetryMemorize.prepare_text(from_html, max_len) or ""
+    local prepared_plain = PoetryMemorize.prepare_text(plain, max_len)
+
+    if count_newlines(prepared_html) > count_newlines(prepared_plain) then
+        return prepared_html
+    elseif count_newlines(prepared_plain) > 0 then
+        return prepared_plain
+    elseif prepared_html ~= "" and #prepared_html >= math.max(1, #prepared_plain) then
+        return prepared_html
+    end
+    return prepared_plain
+end
 
 PoetryMemorize.INTRO_TEXT = _([[
 Creates overlapping step cards in Anki so you recite each new line or chunk aloud.
@@ -28,6 +102,12 @@ Creates overlapping step cards in Anki so you recite each new line or chunk alou
 
 Set up templates and deck options in the plugin docs (anki-memorization.md).]])
 
+local function truncate_preview(s, max_len)
+    s = s or ""
+    if #s > max_len then return s:sub(1, max_len) .. "…" end
+    return s
+end
+
 function PoetryMemorize.build_send_summary(cfg, lines, deck, meta)
     cfg = cfg or {}
     meta = meta or {}
@@ -35,6 +115,13 @@ function PoetryMemorize.build_send_summary(cfg, lines, deck, meta)
     local total = step_cards + (cfg.include_full_recitation ~= false and 1 or 0)
     local preview = lines[1] or ""
     if #preview > 50 then preview = preview:sub(1, 50) .. "…" end
+
+    local ctx_desc
+    if cfg.context_cumulative then
+        ctx_desc = _("all prior lines (cumulative)")
+    else
+        ctx_desc = tostring(cfg.context_lines or 3) .. _(" prior steps (rolling)")
+    end
 
     local body = _("Will send to Anki:\n")
         .. _("• ") .. tostring(total) .. _(" cards (")
@@ -46,14 +133,32 @@ function PoetryMemorize.build_send_summary(cfg, lines, deck, meta)
     body = body .. ")\n"
         .. _("• Deck: ") .. deck .. "\n"
         .. _("• Note type: ") .. (cfg.model or NoteTypeProfiles.MEMORIZATION_MODEL) .. "\n"
-        .. _("• Context: ") .. tostring(cfg.context_lines or 3) .. _(" prior steps shown as cue\n")
+        .. _("• Context: ") .. ctx_desc .. "\n"
         .. _("• Chunk size: ~") .. tostring(cfg.max_words_per_unit or 7) .. _(" words (prose)\n")
+    if cfg.force_verse_lines then
+        body = body .. _("• Split mode: verse lines\n")
+    end
+    if cfg.replace_duplicates then
+        body = body .. _("• Replace existing cards in this deck\n")
+    end
     if preview ~= "" then
         body = body .. _("• First chunk: \"") .. preview .. "\"\n"
     end
     if meta.location and meta.location ~= "" then
         body = body .. _("• Location: ") .. meta.location .. "\n"
     end
+
+    if cfg.show_split_preview and #lines > 0 then
+        body = body .. "\n" .. _("Steps:") .. "\n"
+        local max_steps = math.min(#lines, 24)
+        for i = 1, max_steps do
+            body = body .. tostring(i) .. ". " .. truncate_preview(lines[i], 72) .. "\n"
+        end
+        if #lines > max_steps then
+            body = body .. _("… and ") .. tostring(#lines - max_steps) .. _(" more\n")
+        end
+    end
+
     return body
 end
 
@@ -64,8 +169,6 @@ function PoetryMemorize.maybe_show_intro(then_fn, on_cancel)
         return
     end
 
-    -- Use TextViewer (scrollable body) rather than ButtonDialog: the intro is a
-    -- long multi-line description, which would overflow a ButtonDialog title.
     local intro_dlg
     intro_dlg = TextViewer:new {
         title         = _("Memorization cards"),
@@ -110,9 +213,18 @@ function PoetryMemorize.config(base)
         parent_deck               = "Memorize",
         model                     = NoteTypeProfiles.MEMORIZATION_MODEL,
         context_lines             = 3,
+        context_cumulative        = false,
         max_words_per_unit        = 7,
         auto_create_deck          = true,
         include_full_recitation   = true,
+        force_verse_lines         = false,
+        show_split_preview        = false,
+        replace_duplicates        = false,
+        merge_batch               = false,
+        auto_send                 = false,
+        auto_save_on_fail         = false,
+        quick_highlight_button    = false,
+        skip_hub_submenu          = false,
         tags                      = { "KOReader", "memorization" },
     }
     if base and type(base.memorize) == "table" then
@@ -129,6 +241,9 @@ function PoetryMemorize.config(base)
     if anki.memorize_context_lines then
         cfg.context_lines = tonumber(anki.memorize_context_lines) or cfg.context_lines
     end
+    if anki.memorize_context_cumulative ~= nil then
+        cfg.context_cumulative = anki.memorize_context_cumulative
+    end
     if anki.memorize_max_words then
         cfg.max_words_per_unit = tonumber(anki.memorize_max_words) or cfg.max_words_per_unit
     end
@@ -137,6 +252,28 @@ function PoetryMemorize.config(base)
     end
     if anki.memorize_include_full_recitation ~= nil then
         cfg.include_full_recitation = anki.memorize_include_full_recitation
+    end
+    if anki.memorize_force_verse_lines ~= nil then
+        cfg.force_verse_lines = anki.memorize_force_verse_lines
+    end
+    if anki.memorize_show_split_preview ~= nil then
+        cfg.show_split_preview = anki.memorize_show_split_preview
+    end
+    if anki.memorize_replace_duplicates ~= nil then
+        cfg.replace_duplicates = anki.memorize_replace_duplicates
+    end
+    if anki.memorize_merge_batch ~= nil then
+        cfg.merge_batch = anki.memorize_merge_batch
+    end
+    cfg.auto_send = CardDefaults.auto_send_memorization(base)
+    if anki.memorize_auto_save_on_fail ~= nil then
+        cfg.auto_save_on_fail = anki.memorize_auto_save_on_fail
+    end
+    if anki.memorize_quick_highlight_button ~= nil then
+        cfg.quick_highlight_button = anki.memorize_quick_highlight_button
+    end
+    if anki.memorize_skip_hub_submenu ~= nil then
+        cfg.skip_hub_submenu = anki.memorize_skip_hub_submenu
     end
     if anki.sync_after_send ~= nil then
         cfg.sync_after_send = anki.sync_after_send
@@ -219,7 +356,7 @@ local function expand_long_units(units, max_words)
     local out = {}
     for _i, unit in ipairs(units) do
         if count_words(unit) > max_words then
-            for _i, chunk in ipairs(split_word_chunks(unit, max_words)) do
+            for _i2, chunk in ipairs(split_word_chunks(unit, max_words)) do
                 table.insert(out, chunk)
             end
         else
@@ -235,6 +372,11 @@ function PoetryMemorize.split_units(text, cfg)
     local max_words = cfg.max_words_per_unit or 12
 
     local lines = PoetryMemorize.split_lines(text)
+    if cfg.force_verse_lines then
+        if #lines == 0 then return {} end
+        return expand_long_units(lines, max_words)
+    end
+
     if #lines >= 2 then
         return expand_long_units(lines, max_words)
     end
@@ -275,7 +417,6 @@ function PoetryMemorize.derive_title(lines, meta)
     return (t ~= "" and t) or _("Selection")
 end
 
--- Leaf subdeck label only (book title lives in the parent deck level).
 function PoetryMemorize.derive_piece_label(meta, lines)
     meta = meta or {}
     if meta.book_title and meta.book_title ~= "" then
@@ -318,12 +459,18 @@ function PoetryMemorize.build_notes(lines, opts)
     local notes = {}
     local full_text = table.concat(lines, "\n")
     local ctx_n = math.max(0, tonumber(opts.context_lines) or 3)
+    local cumulative = opts.context_cumulative == true
     local title = opts.title or PoetryMemorize.derive_title(lines)
     local source = opts.source or ""
 
     for i = 1, #lines do
         local ctx_lines = {}
-        local ctx_start = math.max(1, i - ctx_n)
+        local ctx_start
+        if cumulative then
+            ctx_start = 1
+        else
+            ctx_start = math.max(1, i - ctx_n)
+        end
         for j = ctx_start, i - 1 do
             table.insert(ctx_lines, lines[j])
         end
@@ -383,13 +530,22 @@ function PoetryMemorize.send_lines(lines, base_config, meta, done)
     local source = meta.source or ""
     local piece_label = meta.piece_label or PoetryMemorize.derive_piece_label(meta, lines)
     local deck = meta.deck or PoetryMemorize.resolve_deck(cfg, meta.book_title, piece_label)
+
+    if cfg.replace_duplicates then
+        local ok_del, del_err = AnkiSync.delete_notes_in_deck(cfg.url, deck)
+        if not ok_del then
+            if done then done(nil, del_err or _("Could not replace existing cards")) end
+            return
+        end
+    end
+
     local notes = PoetryMemorize.build_notes(lines, {
         title                   = title,
         source                  = source,
         deck                    = deck,
         model                   = cfg.model,
         context_lines           = cfg.context_lines,
-        max_words_per_unit      = cfg.max_words_per_unit,
+        context_cumulative      = cfg.context_cumulative,
         include_full_recitation = cfg.include_full_recitation,
         tags                    = cfg.tags,
     })
@@ -404,15 +560,14 @@ function PoetryMemorize.send_lines(lines, base_config, meta, done)
 
     local sent, failed = 0, 0
     local last_err = nil
-    for _i, note in ipairs(notes) do
-        local ok, err = AnkiSync.add_note(cfg.url, note)
-        if ok then
-            sent = sent + 1
-        else
-            failed = failed + 1
-            last_err = err
-        end
+    local batch_sent, batch_failed, batch_err = AnkiSync.add_notes_batch(cfg.url, notes)
+    if batch_sent == nil then
+        if done then done(nil, batch_err or _("Send failed")) end
+        return
     end
+    sent = batch_sent
+    failed = batch_failed or 0
+    last_err = batch_err
 
     if sent == 0 then
         if done then done(nil, last_err or _("No notes sent")) end
@@ -433,7 +588,7 @@ end
 
 function PoetryMemorize.send_highlight(base_config, text, ui, meta, done)
     local cfg = PoetryMemorize.config(base_config)
-    local lines = PoetryMemorize.split_units(text, cfg)
+    local lines = PoetryMemorize.split_units(PoetryMemorize.prepare_text(text), cfg)
     if #lines == 0 then
         if done then done(nil, _("No text to memorize.")) end
         return
@@ -453,15 +608,81 @@ function PoetryMemorize.send_highlight(base_config, text, ui, meta, done)
     PoetryMemorize.send_lines(lines, base_config, meta, done)
 end
 
+local function save_pending_or_notify(text, ui, meta, deck)
+    if not meta.source then
+        local book = CardFields.format_book_source(meta.book_title, meta.book_author)
+        meta.source = ReadingLocation.append_to_source(book, ui)
+    end
+    if CardStorage.save_memorization_pending(text, meta, deck) then
+        UIManager:show(Notification:new {
+            text    = _("Saved locally. Send from My Cards when Anki is available."),
+            timeout = 5,
+        })
+        return true
+    end
+    UIManager:show(InfoMessage:new {
+        text    = _("Could not save memorization passage."),
+        timeout = 5,
+    })
+    return false
+end
+
+function PoetryMemorize.send_immediate(base_config, text, ui, meta, done)
+    meta = meta or {}
+    local cfg = PoetryMemorize.config(base_config)
+    local prepared = PoetryMemorize.prepare_text(text)
+    local lines = PoetryMemorize.split_units(prepared, cfg)
+    if #lines == 0 then
+        if done then done(nil, _("No text to memorize.")) end
+        return
+    end
+
+    meta.location = meta.location or ReadingLocation.describe(ui)
+    if not meta.title then
+        meta.title = PoetryMemorize.derive_title(lines, meta)
+    end
+    meta.piece_label = meta.piece_label or PoetryMemorize.derive_piece_label(meta, lines)
+    local deck = meta.deck
+        or PoetryMemorize.resolve_deck(cfg, meta.book_title, meta.piece_label)
+
+    local loading = Notification:new {
+        text    = _("Sending memorization cards…"),
+        timeout = 120,
+    }
+    UIManager:show(loading)
+    UIManager:scheduleIn(0.05, function()
+        PoetryMemorize.send_highlight(base_config, prepared, ui, meta, function(ok, err_or_msg)
+            UIManager:close(loading)
+            if ok then
+                UIManager:show(Notification:new { text = err_or_msg, timeout = 5 })
+                if done then done(true, err_or_msg) end
+                return
+            end
+            if cfg.auto_save_on_fail then
+                save_pending_or_notify(prepared, ui, meta, deck)
+                if done then done(false, err_or_msg) end
+                return
+            end
+            UIManager:show(InfoMessage:new {
+                text    = (err_or_msg or _("Send failed"))
+                    .. "\n\n" .. _("Use Save for later to queue on this device."),
+                timeout = 8,
+            })
+            if done then done(nil, err_or_msg) end
+        end)
+    end)
+end
+
 local function show_memorize_send_confirm(base_config, text, ui, meta, cfg, lines, deck)
     local body = PoetryMemorize.build_send_summary(cfg, lines, deck, meta)
 
-    if cfg.url and cfg.url ~= "" and not cfg.url:find("192%.168%.x%.x") then
+    if cfg.url and cfg.url ~= "" and not cfg.url:find("192%.168%.x%.x") and not cfg.replace_duplicates then
         local existing, err = AnkiSync.count_notes_in_deck(cfg.url, deck)
         if existing and existing > 0 then
             body = _("This book and page already have cards in Anki (")
                 .. tostring(existing) .. _(" in this deck).\n\n")
-                .. _("Sending again adds duplicate step/full cards.\n\n")
+                .. _("Sending again adds duplicate step/full cards.\n")
+                .. _("Enable Replace existing cards in Memorization settings to overwrite.\n\n")
                 .. body
         elseif err then
             body = body .. "\n\n" .. _("(Could not check for duplicates: ") .. err .. ")"
@@ -471,8 +692,6 @@ local function show_memorize_send_confirm(base_config, text, ui, meta, cfg, line
     body = body .. "\n\n" .. _(
         "Save for later if Anki is unreachable. Send pending cards from My Cards or the hub menu.")
 
-    -- Use TextViewer (scrollable body) rather than ButtonDialog: ButtonDialog
-    -- only scrolls its button rows, so a long summary overflows the screen.
     local dlg
     dlg = TextViewer:new {
         title         = _("Send memorization cards"),
@@ -504,22 +723,7 @@ local function show_memorize_send_confirm(base_config, text, ui, meta, cfg, line
             end }},
             {{ text = _("Save for later"), callback = function()
                 UIManager:close(dlg)
-                if not meta.source then
-                    local book = CardFields.format_book_source(meta.book_title, meta.book_author)
-                    meta.source = ReadingLocation.append_to_source(book, ui)
-                end
-                local ok_save = CardStorage.save_memorization_pending(text, meta, deck)
-                if ok_save then
-                    UIManager:show(Notification:new {
-                        text    = _("Saved locally. Send from My Cards when Anki is available."),
-                        timeout = 5,
-                    })
-                else
-                    UIManager:show(InfoMessage:new {
-                        text    = _("Could not save memorization passage."),
-                        timeout = 5,
-                    })
-                end
+                save_pending_or_notify(text, ui, meta, deck)
                 if meta.on_done then meta.on_done() end
             end }},
             {{ text = _("Cancel"), callback = function()
@@ -532,8 +736,10 @@ local function show_memorize_send_confirm(base_config, text, ui, meta, cfg, line
 end
 
 function PoetryMemorize.confirm_and_send(base_config, text, ui, meta)
+    meta = meta or {}
     local cfg = PoetryMemorize.config(base_config)
-    local lines = PoetryMemorize.split_units(text, cfg)
+    local prepared = PoetryMemorize.prepare_text(text)
+    local lines = PoetryMemorize.split_units(prepared, cfg)
     if #lines == 0 then
         UIManager:show(InfoMessage:new {
             text    = _("Select one or more lines to memorize."),
@@ -543,7 +749,6 @@ function PoetryMemorize.confirm_and_send(base_config, text, ui, meta)
         return
     end
 
-    meta = meta or {}
     meta.location = ReadingLocation.describe(ui)
     if not meta.title then
         meta.title = PoetryMemorize.derive_title(lines, meta)
@@ -552,9 +757,22 @@ function PoetryMemorize.confirm_and_send(base_config, text, ui, meta)
     local deck = meta.deck
         or PoetryMemorize.resolve_deck(cfg, meta.book_title, meta.piece_label)
 
-    PoetryMemorize.maybe_show_intro(function()
-        show_memorize_send_confirm(base_config, text, ui, meta, cfg, lines, deck)
-    end, meta.on_done)
+    local function after_intro()
+        if cfg.auto_send then
+            PoetryMemorize.send_immediate(base_config, prepared, ui, meta, function()
+                if meta.on_done then meta.on_done() end
+            end)
+            return
+        end
+        show_memorize_send_confirm(base_config, prepared, ui, meta, cfg, lines, deck)
+    end
+
+    if cfg.auto_send then
+        after_intro()
+        return
+    end
+
+    PoetryMemorize.maybe_show_intro(after_intro, meta.on_done)
 end
 
 return PoetryMemorize

@@ -17,12 +17,16 @@ Install at least one dictionary in KOReader before using this flow.
 
 ## Deck
 
-Default: **English::Koreader** (same as Wiki Cards; subdecks by book work the same way).
+Set under **Card defaults → Vocabulary Card → Default deck** (pick from Anki; can differ from Wiki). **Send routing → Subdeck by book title** works the same way as Wiki Card.
 
 ## Plugin settings
 
-- Vocabulary note type: **Vocabulary Card**
-- Deck: **English::Koreader**
+Configure under **AnkiKOAi → Settings → Card defaults → Vocabulary Card**:
+
+- **Note type** — pick from Anki (default: Vocabulary Card)
+- **Default deck** — pick from Anki
+- **Preferred dictionary** — StarDict name, or leave empty to pick each time
+- **One-tap send (Vocabulary)** — skip prompts and send to your default deck
 - No API key required
 
 ## Templates and CSS

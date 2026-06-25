@@ -13,11 +13,13 @@ local AnkiSync       = require("anki_sync")
 local CardFields     = require("card_fields")
 local CardStorage    = require("card_storage")
 local CardSync       = require("card_sync")
+local CardDefaults   = require("card_defaults")
 local DeckPicker         = require("deck_picker")
 local Nav                = require("nav")
 local NoteTypeProfiles   = require("note_type_profiles")
 local NoteTypePicker     = require("note_type_picker")
 local PluginConstants    = require("plugin_constants")
+local PoetryMemorize     = require("poetry_memorize")
 local PromptBuilder      = require("prompt_builder")
 
 local SettingsViewer = {}
@@ -112,9 +114,18 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     -- Forward declarations for submenu functions.
     local show_main, show_ai_providers
-    local deck_extras_parent_fn
-    local show_api_keys, show_sync, show_prompts, show_deck_extras
-    local show_memorization
+    local send_routing_extras_parent_fn
+    local show_api_keys, show_sync, show_prompts, show_send_routing_extras
+    local show_memorization, show_defaults
+    local show_defaults_wiki, show_defaults_vocab, show_defaults_mem, show_send_routing
+    local show_anki_connection, show_tags
+
+    local CHECK_ON = "\xe2\x9c\x93 "
+
+    local function toggle_label(on, label)
+        if on then return CHECK_ON .. label .. ": ON" end
+        return label .. ": OFF"
+    end
 
     local memorization_parent_fn = function() show_main() end
     local prompts_parent_fn = function() show_ai_providers() end
@@ -451,7 +462,7 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                        UIManager:show(edit_dlg)
                        edit_dlg:onShowKeyboard()
                    end }},
-                {{ text = _("Note type: ") .. (function()
+                {{ text = _("Note type for prompts: ") .. (function()
                        local v = edit_model or ""
                        if #v > 24 then return v:sub(1, 24) .. ".." end
                        return v ~= "" and v or "(default)"
@@ -466,7 +477,8 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                            current_model = edit_model,
                            parent_fn     = show_prompts,
                            info_text     = _(
-                               "Choose which Anki note type to customize or preview."),
+                               "Choose which Anki note type to customize or preview. "
+                               .. "Default note types are under Settings → Card defaults."),
                        })
                    end }},
                 {{ text = _("Generate prompt: ")
@@ -540,7 +552,7 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
         UIManager:show(sub_dlg)
     end
 
-    -- ── Submenu: Deck extras ───────────────────────────────────────────
+    -- ── Submenu: Send routing extras ───────────────────────────────────
 
     map_book_to_deck = function(book, parent_fn)
         book = (book or ""):match("^%s*(.-)%s*$") or ""
@@ -548,7 +560,10 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             parent_fn()
             return
         end
-        local existing = (cfg.per_book_decks and cfg.per_book_decks[book]) or cfg.deck or ""
+        local existing = (cfg.per_book_decks and cfg.per_book_decks[book])
+            or CardDefaults.wiki_deck({ anki = cfg })
+            or CardDefaults.vocabulary_deck({ anki = cfg })
+            or ""
         local deck_dlg
         deck_dlg = InputDialog:new {
             title      = _("Deck for current book"),
@@ -584,14 +599,15 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
         deck_dlg:onShowKeyboard()
     end
 
-    show_deck_extras = function()
+    show_send_routing_extras = function()
         local sub_dlg
         sub_dlg = ButtonDialog:new {
-            title   = _("Deck Options"),
+            title   = _("Favorites & book overrides"),
             buttons = {
                 {{ text = _("Toggle favorite: current deck"),
                    callback = function()
-                       local d = cfg.deck
+                       local names = CardDefaults.configured_deck_names({ anki = cfg })
+                       local d = names[1]
                        if not d or d == "" then return end
                        cfg.favorite_decks = cfg.favorite_decks or {}
                        local found = false
@@ -621,15 +637,15 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                                timeout = 3,
                            })
                            edit_field("Book title", "_map_book_title", "Book title",
-                               show_deck_extras)
+                               show_send_routing_extras)
                        else
-                           map_book_to_deck(book, show_deck_extras)
+                           map_book_to_deck(book, show_send_routing_extras)
                        end
                    end }},
                 {{ text = _("Back"),
                    callback = function()
                        UIManager:close(sub_dlg)
-                       local back_fn = deck_extras_parent_fn or show_main
+                       local back_fn = send_routing_extras_parent_fn or show_main
                        back_fn()
                    end }},
             },
@@ -702,10 +718,14 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     local MEMORIZATION_DEFAULTS = {
         memorize_context_lines             = 3,
+        memorize_context_cumulative        = false,
         memorize_max_words                 = 7,
         memorize_include_full_recitation   = true,
-        memorize_parent_deck               = "Memorize",
-        memorize_model                     = NoteTypeProfiles.MEMORIZATION_MODEL,
+        memorize_force_verse_lines         = false,
+        memorize_show_split_preview        = false,
+        memorize_replace_duplicates        = false,
+        memorize_merge_batch               = false,
+        memorize_auto_save_on_fail         = false,
     }
 
     local memorization_draft = nil
@@ -714,31 +734,41 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
         return {
             memorize_context_lines = tonumber(cfg.memorize_context_lines)
                 or MEMORIZATION_DEFAULTS.memorize_context_lines,
+            memorize_context_cumulative = cfg.memorize_context_cumulative == true,
             memorize_max_words = tonumber(cfg.memorize_max_words)
                 or MEMORIZATION_DEFAULTS.memorize_max_words,
             memorize_include_full_recitation = cfg.memorize_include_full_recitation ~= false,
-            memorize_parent_deck = (cfg.memorize_parent_deck and cfg.memorize_parent_deck ~= "")
-                and cfg.memorize_parent_deck or MEMORIZATION_DEFAULTS.memorize_parent_deck,
-            memorize_model = (cfg.memorize_model and cfg.memorize_model ~= "")
-                and cfg.memorize_model or MEMORIZATION_DEFAULTS.memorize_model,
+            memorize_force_verse_lines = cfg.memorize_force_verse_lines == true,
+            memorize_show_split_preview = cfg.memorize_show_split_preview == true,
+            memorize_replace_duplicates = cfg.memorize_replace_duplicates == true,
+            memorize_merge_batch = cfg.memorize_merge_batch == true,
+            memorize_auto_save_on_fail = cfg.memorize_auto_save_on_fail == true,
         }
     end
 
     local function memorization_drafts_equal(a, b)
         if not a or not b then return false end
         return a.memorize_context_lines == b.memorize_context_lines
+            and a.memorize_context_cumulative == b.memorize_context_cumulative
             and a.memorize_max_words == b.memorize_max_words
             and a.memorize_include_full_recitation == b.memorize_include_full_recitation
-            and a.memorize_parent_deck == b.memorize_parent_deck
-            and a.memorize_model == b.memorize_model
+            and a.memorize_force_verse_lines == b.memorize_force_verse_lines
+            and a.memorize_show_split_preview == b.memorize_show_split_preview
+            and a.memorize_replace_duplicates == b.memorize_replace_duplicates
+            and a.memorize_merge_batch == b.memorize_merge_batch
+            and a.memorize_auto_save_on_fail == b.memorize_auto_save_on_fail
     end
 
     local function apply_memorization_draft(draft)
         cfg.memorize_context_lines = draft.memorize_context_lines
+        cfg.memorize_context_cumulative = draft.memorize_context_cumulative
         cfg.memorize_max_words = draft.memorize_max_words
         cfg.memorize_include_full_recitation = draft.memorize_include_full_recitation
-        cfg.memorize_parent_deck = draft.memorize_parent_deck
-        cfg.memorize_model = draft.memorize_model
+        cfg.memorize_force_verse_lines = draft.memorize_force_verse_lines
+        cfg.memorize_show_split_preview = draft.memorize_show_split_preview
+        cfg.memorize_replace_duplicates = draft.memorize_replace_duplicates
+        cfg.memorize_merge_batch = draft.memorize_merge_batch
+        cfg.memorize_auto_save_on_fail = draft.memorize_auto_save_on_fail
     end
 
     show_memorization = function()
@@ -751,14 +781,17 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
         local ctx = draft.memorize_context_lines
         local maxw = draft.memorize_max_words
         local full_on = draft.memorize_include_full_recitation
-        local parent = draft.memorize_parent_deck
-        local mem_model = draft.memorize_model
+        local cum_on = draft.memorize_context_cumulative
+        local verse_on = draft.memorize_force_verse_lines
+        local preview_on = draft.memorize_show_split_preview
+        local replace_on = draft.memorize_replace_duplicates
+        local merge_on = draft.memorize_merge_batch
+        local auto_save_on = draft.memorize_auto_save_on_fail
 
         local sub_dlg
 
         local function reopen_memorization()
-            UIManager:close(sub_dlg)
-            show_memorization()
+            Nav.after_close(function() UIManager:close(sub_dlg) end, show_memorization)
         end
 
         local function discard_and_close()
@@ -797,12 +830,23 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             reopen_memorization()
         end
 
+        local function toggle_bool(key)
+            draft[key] = not draft[key]
+            reopen_memorization()
+        end
+
         sub_dlg = ButtonDialog:new {
             title   = _("Memorization options"),
             buttons = {
                 {{ text = _("Context lines: ") .. tostring(ctx),
                    callback = function()
-                       cycle_number("memorize_context_lines", ctx, { 2, 3, 4, 5 })
+                       cycle_number("memorize_context_lines", ctx,
+                           PoetryMemorize.CONTEXT_LINE_OPTIONS)
+                   end }},
+                {{ text = cum_on and _("Cumulative context: ON")
+                                  or _("Cumulative context: OFF"),
+                   callback = function()
+                       toggle_bool("memorize_context_cumulative")
                    end }},
                 {{ text = _("Max words per chunk: ") .. tostring(maxw),
                    callback = function()
@@ -811,54 +855,32 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                 {{ text = full_on and _("Full recitation card: ON")
                                   or _("Full recitation card: OFF"),
                    callback = function()
-                       draft.memorize_include_full_recitation = not full_on
-                       reopen_memorization()
+                       toggle_bool("memorize_include_full_recitation")
                    end }},
-                {{ text = _("Parent deck: ") .. (function()
-                       local v = parent or ""
-                       if v == "" then return "(not set)" end
-                       if #v > 24 then return v:sub(1, 24) .. ".." end
-                       return v
-                   end)(),
+                {{ text = verse_on and _("Force verse line split: ON")
+                                   or _("Force verse line split: OFF"),
                    callback = function()
-                       UIManager:close(sub_dlg)
-                       local edit_dlg
-                       edit_dlg = InputDialog:new {
-                           title      = _("Memorization Parent Deck"),
-                           input      = parent,
-                           input_hint = "Memorize",
-                           buttons    = {{
-                               { text = _("Cancel"), callback = function()
-                                   UIManager:close(edit_dlg)
-                                   show_memorization()
-                               end },
-                               { text = _("Apply"), is_enter_default = true,
-                                 callback = function()
-                                   draft.memorize_parent_deck = edit_dlg:getInputText() or ""
-                                   UIManager:close(edit_dlg)
-                                   show_memorization()
-                               end },
-                           }},
-                       }
-                       UIManager:show(edit_dlg)
-                       edit_dlg:onShowKeyboard()
+                       toggle_bool("memorize_force_verse_lines")
                    end }},
-                {{ text = _("Note type: ") .. (mem_model ~= "" and mem_model or "(default)"),
+                {{ text = preview_on and _("Show step preview on send: ON")
+                                    or _("Show step preview on send: OFF"),
                    callback = function()
-                       UIManager:close(sub_dlg)
-                       NoteTypePicker.show(cfg, function(chosen)
-                           draft.memorize_model = chosen
-                           show_memorization()
-                       end, {
-                           title         = _("Memorization Note Type"),
-                           current_model = mem_model,
-                           parent_fn     = show_memorization,
-                           profile_filter = "memorization",
-                           readme_id     = "memorization",
-                           fallback_models = {
-                               NoteTypeProfiles.MEMORIZATION_MODEL,
-                           },
-                       })
+                       toggle_bool("memorize_show_split_preview")
+                   end }},
+                {{ text = replace_on and _("Replace existing cards: ON")
+                                    or _("Replace existing cards: OFF"),
+                   callback = function()
+                       toggle_bool("memorize_replace_duplicates")
+                   end }},
+                {{ text = merge_on and _("Merge batch highlights: ON")
+                                  or _("Merge batch highlights: OFF"),
+                   callback = function()
+                       toggle_bool("memorize_merge_batch")
+                   end }},
+                {{ text = auto_save_on and _("Auto-save if send fails: ON")
+                                     or _("Auto-save if send fails: OFF"),
+                   callback = function()
+                       toggle_bool("memorize_auto_save_on_fail")
                    end }},
                 {{ text = _("Restore defaults"),
                    callback = function()
@@ -869,20 +891,375 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                    end }},
                 {{ text = _("Save"),
                    callback = save_and_close }},
+                {{ text = _("Back"),
+                   callback = close_without_saving }},
                 {{ text = _("Close without saving"),
                    callback = close_without_saving }},
+            },
+        }
+
+        function sub_dlg:onClose()
+            if memorization_drafts_equal(draft, saved_snapshot) then
+                discard_and_close()
+                return true
+            end
+            UIManager:show(ConfirmBox:new {
+                text = _("Discard memorization changes?"),
+                ok_text = _("Discard"),
+                ok_callback = discard_and_close,
+                cancel_text = _("Keep editing"),
+            })
+            return true
+        end
+
+        UIManager:show(sub_dlg)
+    end
+
+    -- ── Submenu: Card defaults ───────────────────────────────────────────
+
+    show_defaults_wiki = function()
+        local sub_dlg
+        local wiki_as = cfg.auto_send_wiki == true
+
+        local function reopen()
+            Nav.after_close(function() UIManager:close(sub_dlg) end, show_defaults_wiki)
+        end
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Wiki Card defaults"),
+            buttons = {
+                {{ text = _("Note type: ") .. short("wiki_note_type", 22),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       NoteTypePicker.show(cfg, function(chosen)
+                           local old_model = wiki_note_type_value()
+                           sync_wiki_note_type(chosen)
+                           migrate_on_wiki_model_change(old_model, chosen)
+                           save()
+                           show_defaults_wiki()
+                       end, {
+                           title         = _("Wiki Card note type"),
+                           current_model = wiki_note_type_value(),
+                           parent_fn     = show_defaults_wiki,
+                           profile_filter = "wiki",
+                           readme_id     = "wiki",
+                           fallback_models = {
+                               NoteTypeProfiles.DEFAULT_MODEL,
+                               "Basic",
+                           },
+                       })
+                   end }},
+                {{ text = _("Default deck: ") .. short("wiki_deck", 18),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       DeckPicker.show(cfg, nil, function(chosen)
+                           cfg.wiki_deck = chosen
+                           save()
+                           show_defaults_wiki()
+                       end, {
+                           title        = _("Wiki Card default deck"),
+                           current_deck = CardDefaults.wiki_deck({ anki = cfg }),
+                           parent_fn    = show_defaults_wiki,
+                       })
+                   end }},
+                {{ text = toggle_label(wiki_as, _("One-tap send (Wiki)")),
+                   callback = function()
+                       cfg.auto_send_wiki = not wiki_as
+                       save()
+                       reopen()
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_defaults() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    show_defaults_vocab = function()
+        local sub_dlg
+        local vocab_as = cfg.auto_send_vocabulary == true
+        local pref_dict = (cfg.vocabulary_preferred_dictionary and cfg.vocabulary_preferred_dictionary ~= "")
+            and cfg.vocabulary_preferred_dictionary or _("(auto)")
+
+        local function reopen()
+            Nav.after_close(function() UIManager:close(sub_dlg) end, show_defaults_vocab)
+        end
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Vocabulary Card defaults"),
+            buttons = {
+                {{ text = _("Note type: ") .. short("vocabulary_model", 18),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       NoteTypePicker.show(cfg, function(chosen)
+                           cfg.vocabulary_model = chosen
+                           save()
+                           show_defaults_vocab()
+                       end, {
+                           title         = _("Vocabulary Card note type"),
+                           current_model = cfg.vocabulary_model or NoteTypeProfiles.VOCABULARY_CARD_MODEL,
+                           parent_fn     = show_defaults_vocab,
+                           profile_filter = "vocabulary",
+                           readme_id     = "vocabulary",
+                           fallback_models = {
+                               NoteTypeProfiles.VOCABULARY_CARD_MODEL,
+                               "Basic",
+                           },
+                       })
+                   end }},
+                {{ text = _("Default deck: ") .. short("vocabulary_deck", 18),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       DeckPicker.show(cfg, nil, function(chosen)
+                           cfg.vocabulary_deck = chosen
+                           save()
+                           show_defaults_vocab()
+                       end, {
+                           title        = _("Vocabulary Card default deck"),
+                           current_deck = CardDefaults.vocabulary_deck({ anki = cfg }),
+                           parent_fn    = show_defaults_vocab,
+                       })
+                   end }},
+                {{ text = _("Preferred dictionary: ") .. (type(pref_dict) == "string" and (
+                       #pref_dict > 20 and pref_dict:sub(1, 20) .. ".." or pref_dict) or pref_dict),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       edit_field("Preferred dictionary", "vocabulary_preferred_dictionary",
+                           _("StarDict name, or leave empty"), show_defaults_vocab)
+                   end }},
+                {{ text = toggle_label(vocab_as, _("One-tap send (Vocabulary)")),
+                   callback = function()
+                       cfg.auto_send_vocabulary = not vocab_as
+                       save()
+                       reopen()
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_defaults() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    show_defaults_mem = function()
+        local sub_dlg
+        local mem_as = cfg.auto_send_memorization == true
+        local quick_btn = cfg.memorize_quick_highlight_button == true
+        local skip_hub = cfg.auto_send_skip_hub_submenu == true
+            or cfg.memorize_skip_hub_submenu == true
+
+        local function reopen()
+            Nav.after_close(function() UIManager:close(sub_dlg) end, show_defaults_mem)
+        end
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Memorization Card defaults"),
+            buttons = {
+                {{ text = _("Note type: ") .. short("memorize_model", 18),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       NoteTypePicker.show(cfg, function(chosen)
+                           cfg.memorize_model = chosen
+                           save()
+                           show_defaults_mem()
+                       end, {
+                           title         = _("Memorization note type"),
+                           current_model = cfg.memorize_model or NoteTypeProfiles.MEMORIZATION_MODEL,
+                           parent_fn     = show_defaults_mem,
+                           profile_filter = "memorization",
+                           readme_id     = "memorization",
+                           fallback_models = {
+                               NoteTypeProfiles.MEMORIZATION_MODEL,
+                           },
+                       })
+                   end }},
+                {{ text = _("Parent deck: ") .. short("memorize_parent_deck", 18),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       DeckPicker.show(cfg, nil, function(chosen)
+                           cfg.memorize_parent_deck = chosen
+                           save()
+                           show_defaults_mem()
+                       end, {
+                           title        = _("Memorization Card parent deck"),
+                           current_deck = CardDefaults.memorization_parent_deck({ anki = cfg }),
+                           parent_fn    = show_defaults_mem,
+                       })
+                   end }},
+                {{ text = toggle_label(mem_as, _("One-tap send (Memorization)")),
+                   callback = function()
+                       cfg.auto_send_memorization = not mem_as
+                       save()
+                       reopen()
+                   end }},
+                {{ text = toggle_label(quick_btn, _("Quick highlight button")),
+                   callback = function()
+                       cfg.memorize_quick_highlight_button = not quick_btn
+                       save()
+                       reopen()
+                   end }},
+                {{ text = toggle_label(skip_hub, _("Skip hub submenu when auto-send")),
+                   callback = function()
+                       local new_val = not skip_hub
+                       cfg.auto_send_skip_hub_submenu = new_val
+                       cfg.memorize_skip_hub_submenu = new_val
+                       save()
+                       reopen()
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_defaults() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    show_send_routing = function()
+        local sub_dlg
+        local subdeck_on = cfg.subdeck_by_book ~= false
+
+        local function reopen()
+            Nav.after_close(function() UIManager:close(sub_dlg) end, show_send_routing)
+        end
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Send routing"),
+            buttons = {
+                {{ text = toggle_label(subdeck_on, _("Subdeck by book title")),
+                   callback = function()
+                       cfg.subdeck_by_book = not subdeck_on
+                       save()
+                       reopen()
+                   end }},
+                {{ text = _("Favorites & book overrides…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       send_routing_extras_parent_fn = show_send_routing
+                       show_send_routing_extras()
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_defaults() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    show_defaults = function()
+        local sub_dlg
+        sub_dlg = ButtonDialog:new {
+            title   = _("Card defaults"),
+            buttons = {
+                {{ text = _("Wiki Card…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       show_defaults_wiki()
+                   end }},
+                {{ text = _("Vocabulary Card…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       show_defaults_vocab()
+                   end }},
+                {{ text = _("Memorization Card…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       show_defaults_mem()
+                   end }},
+                {{ text = _("Send routing…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       show_send_routing()
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_main() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    -- ── Submenu: Anki connection & Tags ──────────────────────────────────
+
+    show_anki_connection = function()
+        local sub_dlg
+        local sync_after_on = cfg.sync_after_send ~= false
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Anki connection"),
+            buttons = {
+                {{ text = _("AnkiConnect URL: ") .. short("url", 28),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       edit_field("AnkiConnect URL", "url",
+                           "http://192.168.1.100:8765", show_anki_connection)
+                   end }},
+                {{ text = toggle_label(sync_after_on, _("Sync to AnkiWeb after send")),
+                   callback = function()
+                       cfg.sync_after_send = not sync_after_on
+                       save()
+                       UIManager:close(sub_dlg)
+                       show_anki_connection()
+                   end }},
+                {{ text = _("Test Connection"),
+                   callback = function()
+                       local url = cfg.url
+                       if not url or url == "" then
+                           UIManager:show(Notification:new {
+                               text = _("Set the AnkiConnect URL first"), timeout = 3,
+                           })
+                           return
+                       end
+                       local conn_ok, conn_err = AnkiSync.test_connection(url)
+                       UIManager:show(Notification:new {
+                           text = conn_ok and _("Connection OK")
+                                     or (conn_err or _(
+                                         "Cannot reach Anki. Check URL and that Anki is running.")),
+                           timeout = conn_ok and 3 or 5,
+                       })
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_main() end }},
+            },
+        }
+        UIManager:show(sub_dlg)
+    end
+
+    show_tags = function()
+        local sub_dlg
+        local tags_on = cfg.tags_enabled ~= false
+
+        sub_dlg = ButtonDialog:new {
+            title   = _("Tags"),
+            buttons = {
+                {{ text = toggle_label(tags_on, _("Tags on new cards")),
+                   callback = function()
+                       cfg.tags_enabled = not tags_on
+                       save()
+                       UIManager:close(sub_dlg)
+                       show_tags()
+                   end }},
+                {{ text = _("Tag list: ") .. short("tags"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       edit_field("Tags (comma-sep)", "tags", "KOReader",
+                           show_tags, function(new_val)
+                               local tag_list = {}
+                               for t in new_val:gmatch("[^,]+") do
+                                   local trimmed = t:match("^%s*(.-)%s*$")
+                                   if trimmed ~= "" then table.insert(tag_list, trimmed) end
+                               end
+                               cfg.tags = #tag_list > 0 and tag_list or { "KOReader" }
+                           end)
+                   end }},
+                {{ text = _("Back"),
+                   callback = function() UIManager:close(sub_dlg); show_main() end }},
             },
         }
         UIManager:show(sub_dlg)
     end
 
     -- ── Submenu: Sync ────────────────────────────────────────────────────
-
     show_sync = function()
         local sub_dlg
         local auto_label = cfg.auto_send_wifi
-            and _("Auto-Send on WiFi: ON")
-            or  _("Auto-Send on WiFi: OFF")
+            and CHECK_ON .. _("Send pending when WiFi connects: ON")
+            or  _("Send pending when WiFi connects: OFF")
 
         local sync_name
         if cfg.sync_server then
@@ -920,142 +1297,25 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     show_main = function()
         local cur_provider = cfg.text_provider or "dashscope"
-        local subdeck_on = cfg.subdeck_by_book ~= false
-        local send_on_save = cfg.send_on_save == true
-        local sync_after_on = cfg.sync_after_send ~= false
-        local tags_on = cfg.tags_enabled ~= false
 
         local dlg
-        dlg = ButtonDialog:new {
+            dlg = ButtonDialog:new {
             title   = _("Settings"),
             buttons = {
-                {{ text = _("Default wiki note type: ") .. short("wiki_note_type", 24),
+                {{ text = _("Card defaults…"),
                    callback = function()
                        UIManager:close(dlg)
-                       NoteTypePicker.show(cfg, function(chosen)
-                           local old_model = wiki_note_type_value()
-                           sync_wiki_note_type(chosen)
-                           migrate_on_wiki_model_change(old_model, chosen)
-                           save()
-                           show_main()
-                       end, {
-                           title         = _("Default wiki note type"),
-                           current_model = wiki_note_type_value(),
-                           parent_fn     = show_main,
-                           profile_filter = "wiki",
-                           readme_id     = "wiki",
-                           fallback_models = {
-                               NoteTypeProfiles.DEFAULT_MODEL,
-                               "Basic",
-                           },
-                       })
+                       show_defaults()
                    end }},
-                {{ text = _("Default vocabulary note type: ") .. short("vocabulary_model", 24),
+                {{ text = _("Anki connection…"),
                    callback = function()
                        UIManager:close(dlg)
-                       NoteTypePicker.show(cfg, function(chosen)
-                           cfg.vocabulary_model = chosen
-                           save()
-                           show_main()
-                       end, {
-                           title         = _("Default vocabulary note type"),
-                           current_model = cfg.vocabulary_model or NoteTypeProfiles.VOCABULARY_CARD_MODEL,
-                           parent_fn     = show_main,
-                           profile_filter = "vocabulary",
-                           info_text     = _(
-                               "Dictionary-only cards (no AI). Default in Anki: Vocabulary Card."),
-                           readme_id     = "vocabulary",
-                           fallback_models = {
-                               NoteTypeProfiles.VOCABULARY_CARD_MODEL,
-                               "Basic",
-                           },
-                       })
+                       show_anki_connection()
                    end }},
-                {{ text = _("Deck: ") .. short("deck"),
+                {{ text = _("Tags…"),
                    callback = function()
                        UIManager:close(dlg)
-                       DeckPicker.show(cfg, nil, function(chosen)
-                           cfg.deck = chosen
-                           save()
-                           show_main()
-                       end, {
-                           title        = _("Default Deck"),
-                           current_deck = cfg.deck,
-                           parent_fn    = show_main,
-                       })
-                   end }},
-                {{ text = _("AnkiConnect URL: ") .. short("url", 28),
-                   callback = function()
-                       UIManager:close(dlg)
-                       edit_field("AnkiConnect URL", "url",
-                           "http://192.168.1.100:8765", show_main)
-                   end }},
-                {{ text = subdeck_on and _("Subdeck by book title: ON")
-                                    or _("Subdeck by book title: OFF"),
-                   callback = function()
-                       cfg.subdeck_by_book = not subdeck_on
-                       save()
-                       UIManager:close(dlg)
-                       show_main()
-                   end }},
-                {{ text = send_on_save and _("Send to Anki after generate: ON")
-                                      or _("Send to Anki after generate: OFF"),
-                   callback = function()
-                       cfg.send_on_save = not send_on_save
-                       save()
-                       UIManager:close(dlg)
-                       show_main()
-                   end }},
-                {{ text = sync_after_on and _("Sync to AnkiWeb after send: ON")
-                                       or _("Sync to AnkiWeb after send: OFF"),
-                   callback = function()
-                       cfg.sync_after_send = not sync_after_on
-                       save()
-                       UIManager:close(dlg)
-                       show_main()
-                   end }},
-                {{ text = tags_on and _("Tags: ON") or _("Tags: OFF"),
-                   callback = function()
-                       cfg.tags_enabled = not tags_on
-                       save()
-                       UIManager:close(dlg)
-                       show_main()
-                   end }},
-                {{ text = _("Tag list: ") .. short("tags"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       edit_field("Tags (comma-sep)", "tags", "KOReader",
-                           show_main, function(new_val)
-                               local tag_list = {}
-                               for t in new_val:gmatch("[^,]+") do
-                                   local trimmed = t:match("^%s*(.-)%s*$")
-                                   if trimmed ~= "" then table.insert(tag_list, trimmed) end
-                               end
-                               cfg.tags = #tag_list > 0 and tag_list or { "KOReader" }
-                           end)
-                   end }},
-                {{ text = _("Test Connection"),
-                   callback = function()
-                       local url = cfg.url
-                       if not url or url == "" then
-                           UIManager:show(Notification:new {
-                               text = _("Set the AnkiConnect URL first"), timeout = 3,
-                           })
-                           return
-                       end
-                       local conn_ok, conn_err = AnkiSync.test_connection(url)
-                       UIManager:show(Notification:new {
-                           text = conn_ok and _("Connection OK")
-                                     or (conn_err or _(
-                                         "Cannot reach Anki. Check URL and that Anki is running.")),
-                           timeout = conn_ok and 3 or 5,
-                       })
-                   end }},
-                {{ text = _("Advanced deck options…"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       deck_extras_parent_fn = show_main
-                       show_deck_extras()
+                       show_tags()
                    end }},
                 {{ text = _("Memorization options…"),
                    callback = function()
@@ -1065,7 +1325,7 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                    end }},
                 {{ text = _("AI Settings") .. "  (" .. cur_provider .. ")",
                    callback = function() UIManager:close(dlg); show_ai_providers() end }},
-                {{ text = _("Sync"),
+                {{ text = _("Sync…"),
                    callback = function() UIManager:close(dlg); show_sync() end }},
                 {{ text = settings_parent_fn and _("Back") or _("Close"),
                    callback = function()

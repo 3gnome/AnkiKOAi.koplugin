@@ -12,22 +12,27 @@ Anki note type name: **Wiki Card**
 | 2 | Text |
 | 3 | Links |
 | 4 | Source |
-| 5 | Definition *(optional lede)* |
+| 5 | Definition *(reader's highlight — copied verbatim)* |
 | 6 | IPA *(optional)* |
 | 7 | Synonyms *(legacy; usually empty)* |
 
-**Phrase** = front (highlighted term only). **Text** = encyclopedia article. **Links** = clickable Wikipedia URLs (filled by the plugin). **Source** = book citation.
+**Phrase** = front (short label, often the key term). **Definition** = the reader's exact highlight (shown on the back). **Text** = AI exploration of the subject (no book recap). **Links** = clickable Wikipedia URLs (filled by the plugin). **Source** = book citation.
 
 ## Deck
 
-Default: **English::Koreader** (with subdeck-by-book ON → `English::Koreader::Book Title`).
+Set under **Card defaults → Wiki Card → Default deck** (pick from Anki). With **Send routing → Subdeck by book title** ON, cards go to `YourDeck::Book Title`.
 
 ## Plugin settings
 
-- Note type: **Wiki Card**
-- Deck: **English::Koreader**
+Configure under **AnkiKOAi → Settings → Card defaults → Wiki Card**:
+
+- **Note type** — pick from Anki (default: Wiki Card)
+- **Default deck** — pick from Anki
+- **One-tap send (Wiki)** — skip note-type, deck, and review prompts; sends to your default deck
 - Requires AI API key and Wi‑Fi for generation
-- **Wiki sources** should be ON (**AnkiKOAi → Settings → AI Settings**)
+- **Wiki sources** should be ON (**Settings → AI Settings**)
+
+Send-time options (subdeck by book, per-book overrides): **Card defaults → Send routing**.
 
 ## Templates and CSS
 

@@ -6,6 +6,7 @@ local json  = require("json")
 local _      = require("gettext")
 
 local CardFields       = require("card_fields")
+local CardDefaults     = require("card_defaults")
 local NoteTypeProfiles = require("note_type_profiles")
 local WikiSources      = require("wiki_sources")
 
@@ -13,14 +14,11 @@ local TIMEOUT = 5
 local SYNC_TIMEOUT = 120
 local AnkiSync = {}
 
-function AnkiSync.default_model()
-    return NoteTypeProfiles.DEFAULT_MODEL
-end
-
 -- Base deck before subdeck expansion (respects per-book mapping).
 function AnkiSync.resolve_base_deck(config, card)
     config = config or {}
-    local base = (config.deck and config.deck ~= "") and config.deck or "English::Koreader"
+    local base = CardDefaults.deck_for_card({ anki = config }, card)
+        or "English::Koreader"
     if card and card.book_title and card.book_title ~= ""
        and type(config.per_book_decks) == "table" then
         local mapped = config.per_book_decks[card.book_title]
@@ -104,16 +102,37 @@ function AnkiSync.get_model_field_names(url, model_name)
     return result.result
 end
 
-function AnkiSync.count_notes_in_deck(url, deck_name)
+local function escape_deck_query(deck_name)
+    return (deck_name or ""):gsub("\\", "\\\\"):gsub('"', '\\"')
+end
+
+function AnkiSync.find_note_ids_in_deck(url, deck_name)
     if not url or url == "" or not deck_name or deck_name == "" then
         return nil, "Deck name not set"
     end
-    local escaped = deck_name:gsub("\\", "\\\\"):gsub('"', '\\"')
-    local result, err = post(url, "findNotes", { query = 'deck:"' .. escaped .. '"' })
+    local result, err = post(url, "findNotes", {
+        query = 'deck:"' .. escape_deck_query(deck_name) .. '"',
+    })
     if not result then return nil, err end
     if type(result.error) == "string" then return nil, result.error end
     if type(result.result) ~= "table" then return nil, "Unexpected findNotes response" end
-    return #result.result
+    return result.result
+end
+
+function AnkiSync.count_notes_in_deck(url, deck_name)
+    local ids, err = AnkiSync.find_note_ids_in_deck(url, deck_name)
+    if not ids then return nil, err end
+    return #ids
+end
+
+function AnkiSync.delete_notes_in_deck(url, deck_name)
+    local ids, err = AnkiSync.find_note_ids_in_deck(url, deck_name)
+    if not ids then return nil, err end
+    if #ids == 0 then return true, 0 end
+    local result, del_err = post(url, "deleteNotes", { notes = ids })
+    if not result then return nil, del_err end
+    if type(result.error) == "string" then return nil, result.error end
+    return true, #ids
 end
 
 function AnkiSync.sync_after_send_enabled(config)
@@ -168,6 +187,40 @@ function AnkiSync.add_note(url, note)
     return true
 end
 
+-- Send many notes in one AnkiConnect request (faster than sequential addNote).
+function AnkiSync.add_notes_batch(url, notes)
+    if not url or url == "" then return nil, nil, "Anki URL not configured" end
+    if not notes or #notes == 0 then return 0, 0, nil end
+    if #notes == 1 then
+        local ok, err = AnkiSync.add_note(url, notes[1])
+        if ok then return 1, 0, nil end
+        return 0, 1, err
+    end
+
+    local actions = {}
+    for i, note in ipairs(notes) do
+        actions[i] = { action = "addNote", params = { note = note } }
+    end
+    local result, err = post(url, "multi", { actions = actions })
+    if not result then return nil, nil, err end
+    if type(result.error) == "string" then return nil, nil, result.error end
+    if type(result.result) ~= "table" then
+        return nil, nil, "Unexpected multi response"
+    end
+
+    local sent, failed = 0, 0
+    local last_err = nil
+    for _, item in ipairs(result.result) do
+        if type(item) == "number" then
+            sent = sent + 1
+        else
+            failed = failed + 1
+            last_err = last_err or _("One or more notes failed")
+        end
+    end
+    return sent, failed, last_err
+end
+
 function AnkiSync.send_card(config, card, opts)
     if not config or not config.url or config.url == "" then
         return nil, "Anki URL not configured"
@@ -176,7 +229,9 @@ function AnkiSync.send_card(config, card, opts)
     opts = opts or {}
     CardFields.normalize(card, config)
 
-    local base_deck = (opts.deck and opts.deck ~= "") and opts.deck or config.deck
+    local base_deck = (opts.deck and opts.deck ~= "") and opts.deck
+        or CardDefaults.deck_for_card({ anki = config }, card)
+        or "English::Koreader"
     local model = NoteTypeProfiles.normalize_model_name(
         (opts.model and opts.model ~= "") and opts.model
         or card.model or CardFields.default_wiki_model({ anki = config }))
