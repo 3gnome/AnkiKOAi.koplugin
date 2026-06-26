@@ -43,7 +43,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 - **Vocabulary Card (No AI)** — KOReader dictionary lookup only — definition + passage, no AI
 - **Memorization Card (No AI, Multi-Line)** — overlapping step cards + full-recitation card for poetry and prose ([AnkiLPCG](https://ankilpcg.readthedocs.io/)-style)
 - **AnkiConnect** — send to desktop Anki; optional auto-sync to AnkiWeb after send
-- **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync (no file editing on device)
+- **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync; gray rows = tap for help (no file editing on device)
 - **One-tap send** — per card type: skip note-type/deck prompts and send straight to your default deck
 - **Multiple AI providers** — DashScope, Gemini, OpenAI, OpenRouter
 
@@ -172,15 +172,16 @@ Create deck-options presets in Anki:
 | Wiki / Vocabulary / Memorization note types | **Settings → Card defaults…** (per card type) |
 | Default deck (Wiki) | **Settings → Card defaults → Wiki Card…** |
 | Default deck (Vocabulary) | **Settings → Card defaults → Vocabulary Card…** |
+| Hub menu label (Wiki / Vocabulary) | **Settings → Card defaults → Wiki Card…** or **Vocabulary Card…** (empty = default hub text) |
 | Memorization parent deck | **Settings → Card defaults → Memorization Card…** |
-| Subdeck by book (Wiki/Vocab) | **Settings → Card defaults → Send routing…** |
+| Subdeck by book (Wiki/Vocab) | **Settings → Card defaults → Where cards go…** |
 | One-tap send (per card type) | **Settings → Card defaults…** |
 | Memorization split/context behavior | **Settings → Memorization options…** |
 | Sync to AnkiWeb after send | **Settings → Anki connection…** (default ON) |
 | API keys | **Settings → AI Settings → API Keys** (Wiki Card only) |
 | Send pending when WiFi (every 20 min) | **Settings → Sync…** |
 
-Details: [docs/plugin-configuration.md](docs/plugin-configuration.md)
+Details: [docs/plugin-configuration.md](docs/plugin-configuration.md). In Settings on device, **tap gray rows for help.**
 
 `configuration.lua` is **gitignored** — never commit API keys or LAN URLs.
 

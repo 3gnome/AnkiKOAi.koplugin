@@ -21,7 +21,7 @@ Parent deck: **Memorize** → plugin creates `Memorize::Book title::page`.
 
 Set **Parent deck** under **Settings → Card defaults → Memorization Card** (pick from Anki).
 
-Memorization subdecks (`Memorize::Book::page`) are created automatically; that is separate from **Send routing** (used for Wiki/Vocabulary subdeck-by-book).
+Memorization subdecks (`Memorize::Book::page`) are created automatically; that is separate from **Where cards go…** (used for Wiki/Vocabulary subdeck-by-book).
 
 ## Plugin settings
 

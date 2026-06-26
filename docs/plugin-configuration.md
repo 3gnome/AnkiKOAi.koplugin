@@ -27,25 +27,28 @@ Edit keys and URLs, then copy the plugin folder to the device.
 
 Open from **AnkiKOAi → Settings** or the plugin hub menu.
 
+**Gray help rows:** Settings menus use gray text for informational rows. The subtitle says *Tap gray rows for help.* — tap any gray row for a detailed explanation. Normal rows change settings or open submenus.
+
 ### Main screen
 
 | Setting | Description |
 |---------|-------------|
 | **Card defaults…** | Per card type: note type and default deck (from Anki), one-tap send, dictionary |
 | **Anki connection…** | AnkiConnect URL, sync after send, test connection |
-| **Tags…** | Enable tags and edit tag list |
+| **Tags…** | Enable tags and edit tag list (tap **About tags** for help) |
 | **Memorization options…** | Split/context/batch behavior (not deck or note type) |
-| **AI Settings** | Provider, language, wiki sources, prompts |
+| **AI Settings** | Provider, language, wiki sources, strict accuracy, prompts (gray **About …** rows) |
 | **Sync…** | Send pending cards when WiFi is on (every **20 minutes**, silent), cloud backup |
 
 ### Card defaults
 
 | Submenu | Settings |
 |---------|----------|
-| **Wiki Card…** | Note type, default deck, **One-tap send (Wiki)** |
-| **Vocabulary Card…** | Note type, default deck, preferred dictionary, **One-tap send (Vocabulary)** |
+| **Wiki Card…** | Note type, default deck, hub menu label, **One-tap send (Wiki)** |
+| **Vocabulary Card…** | Note type, default deck, hub menu label, preferred dictionary, **One-tap send (Vocabulary)** |
 | **Memorization Card…** | Note type, parent deck, **One-tap send (Memorization)**, quick highlight button, skip hub submenu when auto-send |
-| **Send routing…** | Subdeck by book title, favorites, per-book deck overrides (not default decks) |
+| **Where cards go…** | Subdeck-by-book, live deck preview, per-book deck overrides (Wiki & Vocabulary only) |
+| **Deck picker shortcuts…** | Favorite decks for manual send; recent decks (read-only) |
 
 **One-tap send** uses each card type’s configured default deck (not the last deck you picked manually). Turn it on per card type under **Card defaults**.
 
@@ -71,10 +74,12 @@ Test with **Test Connection** under **Anki connection**. If it fails: check fire
 ### Deck resolution (Wiki & Vocabulary)
 
 1. Start from the card type’s default deck (**Card defaults → Wiki Card** or **Vocabulary Card**)
-2. If **per-book mapping** exists for `book_title`, use that deck instead (under **Send routing → Favorites & book overrides**)
-3. If **Subdeck by book title** is ON (**Send routing**), append `::Book Title`
+2. If **per-book mapping** exists for `book_title`, use that deck instead (**Card defaults → Where cards go… → Book overrides**)
+3. If **Append book title to deck name** is ON (**Where cards go…**), append `::Book Title` to the parent segment of the base deck
 
-Example: deck `English::Koreader`, book *Moby-Dick* → `English::Koreader::Moby-Dick`
+Example: default `English::Koreader`, book *Moby-Dick* → `English::Koreader::Moby-Dick`
+
+With a book override to `English::Literature`, subdeck ON → `English::Moby-Dick` (parent is the first `::` segment of the override).
 
 ---
 
@@ -95,8 +100,8 @@ Set in **AnkiKOAi → Settings → AI Settings** or `configuration.lua`.
 
 | Setting | Effect |
 |---------|--------|
-| **Wiki sources** | Pulls Wiktionary/Wikipedia snippets into the prompt |
-| **Strict accuracy** | Stricter prompt rules — less creative filler |
+| **Wiki sources** | Pulls Wiktionary/Wikipedia snippets into the prompt; adds wiki-specific accuracy rules. Tap **About Wiki sources** on device for current ON/OFF details |
+| **Strict accuracy** | Adds strict rules: use exactly "Unclear from context" when not confident; never guess. Standard accuracy rules always apply. Tap **About Strict accuracy** on device |
 | **Prompt suffix** | Appended to all generation prompts |
 | **Custom prompt per note type** | Overrides default Wiki Card/Basic/generic prompts |
 
@@ -174,9 +179,11 @@ memorize = {
 
 **Deck and note type** are set under **Settings → Card defaults → Memorization Card**. **Behavior** (context lines, verse split, batch merge, etc.) is under **Memorization options**.
 
-On-device keys for **Card defaults**: `wiki_deck`, `vocabulary_deck`, `wiki_note_type`, `vocabulary_model`, `memorize_parent_deck`, `memorize_model`, `auto_send_wiki`, `auto_send_vocabulary`, `auto_send_memorization`, `memorize_quick_highlight_button`, `auto_send_skip_hub_submenu`, `vocabulary_preferred_dictionary`.
+On-device keys for **Card defaults**: `wiki_deck`, `vocabulary_deck`, `wiki_note_type`, `vocabulary_model`, `wiki_card_hub_label`, `vocabulary_card_hub_label`, `memorize_parent_deck`, `memorize_model`, `auto_send_wiki`, `auto_send_vocabulary`, `auto_send_memorization`, `memorize_quick_highlight_button`, `auto_send_skip_hub_submenu`, `vocabulary_preferred_dictionary`.
 
-On-device keys for **Send routing**: `subdeck_by_book`, `per_book_decks`, `favorite_decks`.
+On-device keys for **Where cards go**: `subdeck_by_book`, `per_book_decks`.
+
+On-device keys for **Deck picker shortcuts**: `favorite_decks`, `recent_decks` (recent is auto-updated on manual send).
 
 On-device keys for **Memorization options**: `memorize_context_lines`, `memorize_context_cumulative`, `memorize_max_words`, `memorize_include_full_recitation`, `memorize_force_verse_lines`, `memorize_show_split_preview`, `memorize_replace_duplicates`, `memorize_merge_batch`, `memorize_auto_save_on_fail`.
 
@@ -184,16 +191,30 @@ See [Anki: Memorization deck](anki-memorization.md) for tuning prose vs poetry.
 
 ---
 
-## Send routing extras
+## Where cards go & deck picker shortcuts
 
-**Card defaults → Send routing → Favorites & book overrides:**
+**Card defaults → Where cards go…** (Wiki & Vocabulary automatic routing):
 
-| Action | Purpose |
-|--------|---------|
-| **Toggle favorite: current deck** | Pin decks for quick pick at send time |
-| **Map deck to current book** | Uses the open book’s title and lets you pick its Anki deck |
+| Item | Purpose |
+|------|---------|
+| **Live preview** | Shows resolved Anki deck for Wiki and Vocabulary using the open book (or defaults only if no book is open) |
+| **Append book title to deck name** | When ON, appends `::Book Title` to the parent segment of the base deck |
+| **Book overrides…** | List, add, edit, or remove per-book deck mappings that replace the card-type default |
 
-Recent decks (last 5) are remembered automatically when you send manually from the card viewer.
+**Card defaults → Deck picker shortcuts…** (manual send only):
+
+| Item | Purpose |
+|------|---------|
+| **Favorite decks…** | Pin decks at the top of the deck picker (★). Does not change automatic routing. |
+| **Recent** | Last 5 decks you picked manually — updated automatically when you send from the card viewer |
+
+Memorization cards use **Card defaults → Memorization Card** for deck rules; they are not affected by **Where cards go**.
+
+**Hub menu labels:** Under **Card defaults → Wiki Card** or **Vocabulary Card**, set **Hub menu label** to rename the highlight-menu entry (empty = default `Wiki Card (AI)` / `Vocabulary Card (No AI)`). Does not change the long-press **Create Vocab Card** dictionary button.
+
+**Prompts & suffix** uses the same Menu + gray help pattern. Prompts always target your Wiki Card note type from Card defaults.
+
+On device, open **Settings → View settings guide** or see **docs/in-app/settings-ui.md** for a concise settings reference.
 
 ---
 

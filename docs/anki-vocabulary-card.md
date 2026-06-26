@@ -165,7 +165,7 @@ Configure on device under **AnkiKOAi → Settings → Card defaults**:
 | Default deck | English::Koreader | Card defaults → Vocabulary Card… |
 | Preferred dictionary | (auto) | Card defaults → Vocabulary Card… |
 | One-tap send (Vocabulary) | OFF | Card defaults → Vocabulary Card… |
-| Subdeck by book title | ON | Card defaults → Send routing… |
+| Subdeck by book title | ON | Card defaults → Where cards go… |
 | Tags | KOReader | Settings → Tags… |
 
 **One-tap send** uses your default deck and auto-picks the preferred dictionary when set. With multiple dictionaries and no preferred name, the plugin shows the picker once.

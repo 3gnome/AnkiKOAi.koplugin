@@ -2,6 +2,7 @@
 
 local CardFields       = require("card_fields")
 local NoteTypeProfiles = require("note_type_profiles")
+local PluginConstants  = require("plugin_constants")
 
 local CardDefaults = {}
 
@@ -117,6 +118,24 @@ end
 function CardDefaults.quick_highlight_button(config)
     local ac = CardDefaults.merged(config)
     return ac.memorize_quick_highlight_button == true
+end
+
+local function trimmed_hub_label(value, fallback)
+    if value and type(value) == "string" then
+        local t = value:match("^%s*(.-)%s*$") or ""
+        if t ~= "" then return t end
+    end
+    return fallback
+end
+
+function CardDefaults.wiki_hub_label(config)
+    local ac = CardDefaults.merged(config)
+    return trimmed_hub_label(ac.wiki_card_hub_label, PluginConstants.WIKI_CARD_LABEL)
+end
+
+function CardDefaults.vocabulary_hub_label(config)
+    local ac = CardDefaults.merged(config)
+    return trimmed_hub_label(ac.vocabulary_card_hub_label, PluginConstants.VOCABULARY_CARD_LABEL)
 end
 
 -- Flatten hub submenu when auto-send is on for this card type (or legacy mem-only flag).

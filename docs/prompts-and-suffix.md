@@ -15,11 +15,11 @@ On your e-reader, tap **View README** in that submenu for a short summary (`docs
 | Control | Purpose |
 |---------|---------|
 | **Prompt suffix** | Extra instructions appended to every generate and regen prompt |
-| **Note type for prompts** | Which Anki model’s prompts you edit or preview (default note types live under **Card defaults**) |
-| **Generate prompt** | Full template override for new card creation |
-| **Regen prompt** | Template override for “Regenerate broader context” |
-| **Preview generate / regen** | Shows the assembled prompt (sample highlight data) |
-| **Reset generate / regen** | Clears custom template for the selected note type only |
+| **Note type** | Read-only — always your Wiki Card note type from **Card defaults → Wiki Card** |
+| **View default generate/regen** | Built-in template only (gray row) |
+| **Modify generate/regen prompt…** | Custom template override |
+| **Preview effective generate/regen** | Full assembled prompt (sample highlight data) |
+| **Reset generate / regen** | Clears custom template for the wiki note type |
 | **Restore defaults** | Clears suffix and all custom prompts |
 | **Save** | Writes to on-device settings (`ankikooai_settings.json`) |
 
@@ -44,7 +44,7 @@ Good uses: tone (“formal academic English”), focus (“always mention word o
 
 ## Per–note-type prompts
 
-Custom templates live in `custom_prompts` keyed by **exact Anki note type name** (normalized through the plugin’s model-name rules).
+Custom templates live in `custom_prompts` keyed by **exact Anki note type name** (normalized through the plugin’s model-name rules). The UI always edits prompts for your **Wiki Card note type** (`wiki_note_type` from Card defaults); `prompt_edit_model` is kept in sync on save.
 
 - **Generate prompt** → key = note type name (e.g. `Wiki Card`)
 - **Regen prompt** → key = note type name + `::__regen_text__`
@@ -60,13 +60,14 @@ When you change the default wiki note type under **Settings → Card defaults �
 
 ## Accuracy and wiki blocks
 
-These are **not** edited in Prompts & suffix; they come from **AI Settings**:
+These are **not** edited in Prompts & suffix; they come from **AI Settings** (tap gray **About …** rows on device for details):
 
 | Toggle | In prompt |
 |--------|-----------|
-| Wiki sources ON | Wikimedia excerpts + wiki-specific accuracy rules |
-| Wiki sources OFF | Passage-only accuracy rules |
-| Strict accuracy ON | Extra “Unclear from context” rule |
+| Wiki sources ON | Wikimedia excerpts + wiki-specific accuracy rules (treat excerpts as primary sources) |
+| Wiki sources OFF | Passage-only accuracy rules — no Wikimedia excerpts |
+| Strict accuracy ON | Extra rule: if not confident about any field, use exactly "Unclear from context"; never guess |
+| Strict accuracy OFF | Standard accuracy rules only (no invented citations; prefer passage-supported facts) |
 
 The suffix and custom templates still receive `{accuracy_rules}`, `{wiki_block}`, `{custom_suffix}`, and other placeholders when previewed or sent.
 
@@ -102,7 +103,7 @@ In `ankikooai_settings.json`:
 }
 ```
 
-`prompt_edit_model` remembers which note type was selected in the UI.
+`prompt_edit_model` mirrors `wiki_note_type` (synced when you save Prompts & suffix).
 
 ---
 

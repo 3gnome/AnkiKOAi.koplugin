@@ -26,7 +26,7 @@ cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo 
 | `card_defaults.lua` | **Central API** for per-type decks, models, auto-send flags |
 | `card_fields.lua` | Field normalization, settings migration |
 | `card_storage.lua` | `ankikooai_cards.json`, `ankikooai_settings.json` |
-| `settings_viewer.lua` | Settings UI (Card defaults, Send routing, AI, sync) |
+| `settings_viewer.lua` | Settings UI (Menu + gray help rows, Card defaults, Where cards go, AI, sync) |
 | `plugin_menu.lua` | AnkiKOAi hub menu from highlight dialog |
 | `send_flow.lua` / `anki_sync.lua` | Send + AnkiConnect HTTP |
 | `deck_picker.lua` / `note_type_picker.lua` | Pick from Anki lists |
@@ -42,10 +42,17 @@ cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo 
 
 **Settings → Card defaults** — each card type has **note type + deck** (Anki pickers):
 
-- **Wiki Card…** — `wiki_note_type`, `wiki_deck`, `auto_send_wiki`
-- **Vocabulary Card…** — `vocabulary_model`, `vocabulary_deck`, dictionary, `auto_send_vocabulary`
+- **Wiki Card…** — `wiki_note_type`, `wiki_deck`, `wiki_card_hub_label`, `auto_send_wiki`
+- **Vocabulary Card…** — `vocabulary_model`, `vocabulary_deck`, `vocabulary_card_hub_label`, dictionary, `auto_send_vocabulary`
 - **Memorization Card…** — `memorize_model`, `memorize_parent_deck`, one-tap / quick button
-- **Send routing…** — `subdeck_by_book`, favorites, per-book overrides (**not** default decks)
+- **Where cards go…** — `subdeck_by_book`, `per_book_decks` (**not** default decks; Wiki/Vocabulary only)
+- **Deck picker shortcuts…** — `favorite_decks`, `recent_decks` (manual send only)
+
+**Settings menus** use `Menu` with subtitle `SETTINGS_HELP_SUBTITLE` (`Tap gray rows for help.`) and `info_menu_item()` for dim tappable help rows. In-app guide: `docs/in-app/settings-ui.md` (`readme_viewer` id `settings`).
+
+**Hub labels:** `CardDefaults.wiki_hub_label(config)` / `vocabulary_hub_label(config)` — empty `wiki_card_hub_label` / `vocabulary_card_hub_label` → `PluginConstants` defaults. Used in `plugin_menu.lua`, `highlight_inbox.lua`.
+
+**Prompts & suffix** (`settings_viewer.lua` → `show_prompts`): Menu (not ButtonDialog); always edits `wiki_note_type`; `prompt_edit_model` synced on save. **View default** = `PromptBuilder.preview_*_builtin` (built-in template only); **Preview effective** = `preview_generate` / `preview_regen`.
 
 Use `CardDefaults.*` in code; do not read raw `config.deck` except as legacy fallback inside `card_defaults.lua`.
 

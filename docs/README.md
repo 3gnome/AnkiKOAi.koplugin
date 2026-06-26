@@ -42,7 +42,7 @@ This plugin supports three separate flows:
 2. **Vocabulary Card (No AI)** — highlight a word → KOReader dictionary lookup → send to your vocabulary default deck (**Card defaults → Vocabulary Card**). Anki note type: **Vocabulary Card**. No API key required.
 3. **Memorization Card (No AI, Multi-Line)** — highlight a poem or passage → overlapping step cards + full recitation → send to `Memorize::Book::location` subdecks (**Card defaults → Memorization Card**).
 
-Each flow needs its **own Anki note type and default deck**. Configure both under **Settings → Card defaults** (Wiki Card, Vocabulary Card, or Memorization Card). Use **Send routing** for subdeck-by-book and per-book overrides — not for default deck selection.
+Each flow needs its **own Anki note type and default deck**. Configure both under **Settings → Card defaults** (Wiki Card, Vocabulary Card, or Memorization Card). Use **Where cards go…** for subdeck-by-book and per-book overrides — not for default deck selection. Use **Deck picker shortcuts…** for favorite decks when sending manually. In Settings, **tap gray rows for help.**
 
 ## Field names must match
 

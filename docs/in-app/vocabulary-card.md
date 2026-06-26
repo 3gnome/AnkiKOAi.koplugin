@@ -22,7 +22,7 @@ Install at least one dictionary in KOReader before using this flow.
 
 ## Deck
 
-Set under **Card defaults → Vocabulary Card → Default deck** (pick from Anki; can differ from Wiki). **Send routing → Subdeck by book title** works the same way as Wiki Card.
+Set under **Card defaults → Vocabulary Card → Default deck** (pick from Anki; can differ from Wiki). **Where cards go… → Append book title to deck name** works the same way as Wiki Card.
 
 ## Plugin settings
 

@@ -5,6 +5,7 @@ local ButtonDialog   = require("ui/widget/buttondialog")
 local ConfirmBox     = require("ui/widget/confirmbox")
 local InfoMessage    = require("ui/widget/infomessage")
 local InputDialog    = require("ui/widget/inputdialog")
+local Menu           = require("ui/widget/menu")
 local Notification   = require("ui/widget/notification")
 local UIManager      = require("ui/uimanager")
 local _              = require("gettext")
@@ -114,10 +115,11 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     -- Forward declarations for submenu functions.
     local show_main, show_ai_providers
-    local send_routing_extras_parent_fn
-    local show_api_keys, show_sync, show_prompts, show_send_routing_extras
+    local show_api_keys, show_sync, show_prompts
     local show_memorization, show_defaults
-    local show_defaults_wiki, show_defaults_vocab, show_defaults_mem, show_send_routing
+    local show_defaults_wiki, show_defaults_vocab, show_defaults_mem
+    local show_where_cards_go, show_deck_picker_shortcuts, show_book_overrides
+    local show_favorite_decks
     local show_anki_connection, show_tags
 
     local CHECK_ON = "\xe2\x9c\x93 "
@@ -125,6 +127,44 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
     local function toggle_label(on, label)
         if on then return CHECK_ON .. label .. ": ON" end
         return label .. ": OFF"
+    end
+
+    local SETTINGS_HELP_SUBTITLE = _("Tap gray rows for help.")
+
+    local function show_settings_help(text)
+        UIManager:show(InfoMessage:new {
+            text    = text,
+            timeout = 8,
+        })
+    end
+
+    local function info_menu_item(label, help_text)
+        return {
+            text     = label,
+            dim      = true,
+            callback = function() show_settings_help(help_text) end,
+        }
+    end
+
+    local function open_settings_menu(title, item_table, on_close, subtitle)
+        local menu_instance
+        menu_instance = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
+            title      = title,
+            subtitle   = subtitle or SETTINGS_HELP_SUBTITLE,
+            item_table = item_table,
+        }), function()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, on_close or function() end)
+        end)
+        Nav.show(menu_instance)
+        return menu_instance
+    end
+
+    local function close_menu_then(menu_instance, fn)
+        Nav.after_close(function()
+            if menu_instance then UIManager:close(menu_instance) end
+        end, fn)
     end
 
     local memorization_parent_fn = function() show_main() end
@@ -210,9 +250,10 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
     -- ── Submenu: AI Settings ─────────────────────────────────────────────
 
     show_ai_providers = function()
-        local sub_dlg
-
         local TEXT_PROVIDERS = { "dashscope", "gemini", "openai", "openrouter" }
+        local menu_instance
+        local wiki_on = cfg.use_wiki_sources ~= false
+        local strict_on = cfg.strict_accuracy == true
 
         local function cycle(key, options)
             local cur = cfg[key] or options[1]
@@ -222,53 +263,89 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             end
             cfg[key] = options[(idx % #options) + 1]
             save()
-            UIManager:close(sub_dlg)
-            show_ai_providers()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, show_ai_providers)
         end
 
-        sub_dlg = ButtonDialog:new {
-            title   = _("AI Settings"),
-            buttons = {
-                {{ text = _("Provider: ") .. (cfg.text_provider or "dashscope"),
-                   callback = function() cycle("text_provider", TEXT_PROVIDERS) end }},
-                {{ text = _("API Keys…"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       show_api_keys()
-                   end }},
-                {{ text = (cfg.use_wiki_sources ~= false)
-                        and _("Wiki sources: ON")
-                        or  _("Wiki sources: OFF"),
-                   callback = function()
-                       cfg.use_wiki_sources = (cfg.use_wiki_sources == false)
-                       save()
-                       UIManager:close(sub_dlg)
-                       show_ai_providers()
-                   end }},
-                {{ text = (cfg.strict_accuracy and _("Strict accuracy: ON")
-                                     or _("Strict accuracy: OFF")),
-                   callback = function()
-                       cfg.strict_accuracy = not cfg.strict_accuracy
-                       save()
-                       UIManager:close(sub_dlg)
-                       show_ai_providers()
-                   end }},
-                {{ text = _("Language: ") .. (cfg.target_language or "English"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       edit_field("Target Language", "target_language",
-                           "English", show_ai_providers)
-                   end }},
-                {{ text = _("Prompts & suffix"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       show_prompts()
-                   end }},
-                {{ text = _("Back"),
-                   callback = function() UIManager:close(sub_dlg); show_main() end }},
+        local strict_help
+        if strict_on then
+            strict_help = _(
+                "Strict accuracy is ON. The AI adds extra rules: if not confident about any field, it must write exactly \"Unclear from context\" for that field. It should never guess to seem informative.\n\nStandard accuracy rules still apply (no invented citations, quotes, or sources)."
+            )
+        else
+            strict_help = _(
+                "Strict accuracy is OFF. Standard accuracy rules apply: state only confident facts, do not invent citations or quotes, prefer what the passage supports.\n\nTurn ON to require \"Unclear from context\" whenever the AI is not confident about a field."
+            )
+        end
+
+        local item_table = {
+            info_menu_item(_("About AI Settings"), _(
+                "These settings apply to Wiki Card (AI) generation only — not Vocabulary or Memorization cards.\n\nChoose a text provider, enter API keys, and optionally adjust Wiki sources, Strict accuracy, and target language. Prompts & suffix opens advanced prompt editing."
+            )),
+            info_menu_item(_("About Strict accuracy"), strict_help),
+            info_menu_item(_("About Wiki sources"), wiki_on
+                and _(
+                    "Wiki sources is ON. The plugin fetches Wiktionary and Wikipedia excerpts for prompts and uses wiki-specific accuracy rules (treat excerpts as primary sources; do not contradict them).\n\nTurn OFF to use passage-only accuracy rules without Wikimedia excerpts."
+                )
+                or _(
+                    "Wiki sources is OFF. Prompts use passage-only accuracy rules without Wikimedia excerpts.\n\nTurn ON to fetch Wiktionary/Wikipedia snippets and add wiki-specific accuracy rules."
+                )),
+            info_menu_item(_("About target language"), _(
+                "Target language for AI-generated card text (definitions, exploration articles, and notes). Example: English, German, Japanese."
+            )),
+            {
+                text = _("Provider: ") .. (cfg.text_provider or "dashscope"),
+                callback = function() cycle("text_provider", TEXT_PROVIDERS) end,
+            },
+            {
+                text = _("API Keys…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_api_keys)
+                end,
+            },
+            {
+                text = wiki_on and _("Wiki sources: ON") or _("Wiki sources: OFF"),
+                callback = function()
+                    cfg.use_wiki_sources = not wiki_on
+                    save()
+                    Nav.after_close(function()
+                        if menu_instance then UIManager:close(menu_instance) end
+                    end, show_ai_providers)
+                end,
+            },
+            {
+                text = strict_on and _("Strict accuracy: ON") or _("Strict accuracy: OFF"),
+                callback = function()
+                    cfg.strict_accuracy = not strict_on
+                    save()
+                    Nav.after_close(function()
+                        if menu_instance then UIManager:close(menu_instance) end
+                    end, show_ai_providers)
+                end,
+            },
+            {
+                text = _("Language: ") .. (cfg.target_language or "English"),
+                callback = function()
+                    close_menu_then(menu_instance, function()
+                        edit_field("Target Language", "target_language",
+                            "English", show_ai_providers)
+                    end)
+                end,
+            },
+            {
+                text = _("Prompts & suffix"),
+                callback = function()
+                    close_menu_then(menu_instance, show_prompts)
+                end,
+            },
+            {
+                text = _("← Back"),
+                callback = function() close_menu_then(menu_instance, show_main) end,
             },
         }
-        UIManager:show(sub_dlg)
+
+        menu_instance = open_settings_menu(_("AI Settings"), item_table, show_main)
     end
 
     -- ── Submenu: Prompts ───────────────────────────────────────────────
@@ -308,8 +385,8 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     local function apply_prompts_draft(draft)
         cfg.prompt_suffix = draft.prompt_suffix or ""
-        cfg.prompt_edit_model = draft.prompt_edit_model
-            or wiki_note_type_value()
+        cfg.prompt_edit_model = wiki_note_type_value()
+        draft.prompt_edit_model = cfg.prompt_edit_model
         cfg.custom_prompts = PromptBuilder.copy_custom_prompts(draft.custom_prompts)
     end
 
@@ -333,55 +410,56 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             prompts_draft = prompts_snapshot_from_cfg()
         end
         local draft = prompts_draft
+        draft.prompt_edit_model = wiki_note_type_value()
         local saved_snapshot = prompts_snapshot_from_cfg()
-        local edit_model = draft.prompt_edit_model
-            or wiki_note_type_value()
+        saved_snapshot.prompt_edit_model = wiki_note_type_value()
+        local edit_model = wiki_note_type_value()
         local regen_key = PromptBuilder.regen_key(edit_model)
         local suffix = draft.prompt_suffix or ""
-
-        local sub_dlg
+        local menu_instance
 
         local function open_prompt_preview(title, build_fn)
-            UIManager:close(sub_dlg)
-            UIManager:scheduleIn(0.05, function()
-                local ok, body = pcall(build_fn)
-                if not ok then
-                    UIManager:show(InfoMessage:new {
-                        text    = _("Preview failed: ") .. tostring(body),
-                        timeout = 6,
-                    })
-                    show_prompts()
-                    return
-                end
-                if type(body) ~= "string" then body = tostring(body or "") end
-                if #body > PREVIEW_MAX_CHARS then
-                    body = body:sub(1, PREVIEW_MAX_CHARS)
-                        .. _("\n\n[Preview truncated — prompt is very long.]")
-                end
-                local rv_ok, ReadmeViewer = pcall(require, "readme_viewer")
-                if rv_ok and ReadmeViewer and ReadmeViewer.show_text_or_notify then
-                    ReadmeViewer.show_text_or_notify(title, body, {
-                        on_close = show_prompts,
-                    })
-                else
-                    UIManager:show(InfoMessage:new {
-                        text    = _("Preview unavailable"),
-                        timeout = 5,
-                    })
-                    show_prompts()
-                end
+            close_menu_then(menu_instance, function()
+                UIManager:scheduleIn(0.05, function()
+                    local ok, body = pcall(build_fn)
+                    if not ok then
+                        UIManager:show(InfoMessage:new {
+                            text    = _("Preview failed: ") .. tostring(body),
+                            timeout = 6,
+                        })
+                        show_prompts()
+                        return
+                    end
+                    if type(body) ~= "string" then body = tostring(body or "") end
+                    if #body > PREVIEW_MAX_CHARS then
+                        body = body:sub(1, PREVIEW_MAX_CHARS)
+                            .. _("\n\n[Preview truncated — prompt is very long.]")
+                    end
+                    local rv_ok, ReadmeViewer = pcall(require, "readme_viewer")
+                    if rv_ok and ReadmeViewer and ReadmeViewer.show_text_or_notify then
+                        ReadmeViewer.show_text_or_notify(title, body, {
+                            on_close = show_prompts,
+                        })
+                    else
+                        UIManager:show(InfoMessage:new {
+                            text    = _("Preview unavailable"),
+                            timeout = 5,
+                        })
+                        show_prompts()
+                    end
+                end)
             end)
         end
 
         local function reopen_prompts()
-            UIManager:close(sub_dlg)
-            show_prompts()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, show_prompts)
         end
 
         local function discard_and_close()
             prompts_draft = nil
-            UIManager:close(sub_dlg)
-            prompts_parent_fn()
+            close_menu_then(menu_instance, prompts_parent_fn)
         end
 
         local function close_without_saving()
@@ -401,158 +479,278 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             apply_prompts_draft(draft)
             save()
             prompts_draft = nil
-            UIManager:close(sub_dlg)
-            prompts_parent_fn()
+            close_menu_then(menu_instance, prompts_parent_fn)
         end
 
         local function edit_prompt_field(title, key, hint, empty_ok)
-            UIManager:close(sub_dlg)
-            local cur = (draft.custom_prompts and draft.custom_prompts[key]) or ""
-            local edit_dlg
-            edit_dlg = InputDialog:new {
-                title = title,
-                input = cur,
-                input_hint = hint,
-                buttons = {{
-                    { text = _("Cancel"), callback = function()
-                        UIManager:close(edit_dlg)
-                        show_prompts()
-                    end },
-                    { text = _("Apply"), is_enter_default = true, callback = function()
-                        local txt = edit_dlg:getInputText() or ""
-                        UIManager:close(edit_dlg)
-                        draft.custom_prompts = draft.custom_prompts or {}
-                        if txt == "" and empty_ok then
-                            draft.custom_prompts[key] = nil
-                        else
-                            draft.custom_prompts[key] = txt
-                        end
-                        show_prompts()
-                    end },
-                }},
-            }
-            UIManager:show(edit_dlg)
-            edit_dlg:onShowKeyboard()
+            close_menu_then(menu_instance, function()
+                local cur = (draft.custom_prompts and draft.custom_prompts[key]) or ""
+                local edit_dlg
+                edit_dlg = InputDialog:new {
+                    title = title,
+                    input = cur,
+                    input_hint = hint,
+                    buttons = {{
+                        { text = _("Cancel"), callback = function()
+                            UIManager:close(edit_dlg)
+                            show_prompts()
+                        end },
+                        { text = _("Apply"), is_enter_default = true, callback = function()
+                            local txt = edit_dlg:getInputText() or ""
+                            UIManager:close(edit_dlg)
+                            draft.custom_prompts = draft.custom_prompts or {}
+                            if txt == "" and empty_ok then
+                                draft.custom_prompts[key] = nil
+                            else
+                                draft.custom_prompts[key] = txt
+                            end
+                            show_prompts()
+                        end },
+                    }},
+                }
+                UIManager:show(edit_dlg)
+                edit_dlg:onShowKeyboard()
+            end)
         end
 
-        sub_dlg = ButtonDialog:new {
-            title   = _("Prompts & suffix"),
-            buttons = {
-                {{ text = _("Prompt suffix: ") .. suffix_button_label(suffix),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       local edit_dlg
-                       edit_dlg = InputDialog:new {
-                           title = _("Prompt Suffix"),
-                           input = suffix,
-                           input_hint = _("Always emphasize etymology."),
-                           buttons = {{
-                               { text = _("Cancel"), callback = function()
-                                   UIManager:close(edit_dlg)
-                                   show_prompts()
-                               end },
-                               { text = _("Apply"), is_enter_default = true,
-                                 callback = function()
-                                   draft.prompt_suffix = edit_dlg:getInputText() or ""
-                                   UIManager:close(edit_dlg)
-                                   show_prompts()
-                               end },
-                           }},
-                       }
-                       UIManager:show(edit_dlg)
-                       edit_dlg:onShowKeyboard()
-                   end }},
-                {{ text = _("Note type for prompts: ") .. (function()
-                       local v = edit_model or ""
-                       if #v > 24 then return v:sub(1, 24) .. ".." end
-                       return v ~= "" and v or "(default)"
-                   end)(),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       NoteTypePicker.show(cfg, function(chosen)
-                           draft.prompt_edit_model = chosen
-                           show_prompts()
-                       end, {
-                           title         = _("Note Type for Prompts"),
-                           current_model = edit_model,
-                           parent_fn     = show_prompts,
-                           info_text     = _(
-                               "Choose which Anki note type to customize or preview. "
-                               .. "Default note types are under Settings → Card defaults."),
-                       })
-                   end }},
-                {{ text = _("Generate prompt: ")
-                       .. custom_prompt_status(draft.custom_prompts, edit_model),
-                   callback = function()
-                       edit_prompt_field(
-                           _("Custom generate prompt for ") .. edit_model,
-                           edit_model,
-                           _("Leave empty to use default profile"),
-                           true)
-                   end }},
-                {{ text = _("Regen prompt: ")
-                       .. custom_prompt_status(draft.custom_prompts, regen_key),
-                   callback = function()
-                       edit_prompt_field(
-                           _("Custom regen prompt for ") .. edit_model,
-                           regen_key,
-                           _("Leave empty to use default regen profile"),
-                           true)
-                   end }},
-                {{ text = _("Reset generate prompt"),
-                   callback = function()
-                       if draft.custom_prompts then
-                           draft.custom_prompts[edit_model] = nil
-                       end
-                       reopen_prompts()
-                   end }},
-                {{ text = _("Reset regen prompt"),
-                   callback = function()
-                       if draft.custom_prompts then
-                           draft.custom_prompts[regen_key] = nil
-                       end
-                       reopen_prompts()
-                   end }},
-                {{ text = _("Preview generate prompt"),
-                   callback = function()
-                       open_prompt_preview(_("Generate prompt preview"), function()
-                           return PromptBuilder.preview_generate(cfg, draft, edit_model)
-                       end)
-                   end }},
-                {{ text = _("Preview regen prompt"),
-                   callback = function()
-                       open_prompt_preview(_("Regen prompt preview"), function()
-                           return PromptBuilder.preview_regen(cfg, draft, edit_model)
-                       end)
-                   end }},
-                {{ text = _("View README"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       local ok, ReadmeViewer = pcall(require, "readme_viewer")
-                       if ok and ReadmeViewer.show_or_notify then
-                           ReadmeViewer.show_or_notify("prompts", {
-                               on_close = show_prompts,
-                           })
-                       else
-                           show_prompts()
-                       end
-                   end }},
-                {{ text = _("Restore defaults"),
-                   callback = function()
-                       draft.prompt_suffix = PROMPTS_DEFAULTS.prompt_suffix
-                       draft.custom_prompts = {}
-                       reopen_prompts()
-                   end }},
-                {{ text = _("Save"),
-                   callback = save_and_close }},
-                {{ text = _("Close without saving"),
-                   callback = close_without_saving }},
+        local function edit_suffix()
+            close_menu_then(menu_instance, function()
+                local edit_dlg
+                edit_dlg = InputDialog:new {
+                    title = _("Prompt Suffix"),
+                    input = suffix,
+                    input_hint = _("Always emphasize etymology."),
+                    buttons = {{
+                        { text = _("Cancel"), callback = function()
+                            UIManager:close(edit_dlg)
+                            show_prompts()
+                        end },
+                        { text = _("Apply"), is_enter_default = true, callback = function()
+                            draft.prompt_suffix = edit_dlg:getInputText() or ""
+                            UIManager:close(edit_dlg)
+                            show_prompts()
+                        end },
+                    }},
+                }
+                UIManager:show(edit_dlg)
+                edit_dlg:onShowKeyboard()
+            end)
+        end
+
+        local note_type_line = edit_model
+        if #note_type_line > 28 then
+            note_type_line = note_type_line:sub(1, 25) .. "…"
+        end
+
+        local item_table = {
+            info_menu_item(_("About Prompts & suffix"), _(
+                "Customize AI prompts for Wiki Card generation only — not Vocabulary or Memorization.\n\nPrompts apply to the note type set under Card defaults → Wiki Card (currently: "
+            ) .. edit_model .. _(
+                "). Changes are drafts until you tap Save."
+            )),
+            info_menu_item(_("About prompt suffix"), _(
+                "Short extra instructions appended to every AI prompt (generate and regen). Leave empty to use built-in defaults only."
+            )),
+            info_menu_item(_("About generate prompt"), _(
+                "The main template used when creating a new Wiki Card from a highlight. A custom template replaces the built-in profile for this note type; leave empty to use the default."
+            )),
+            info_menu_item(_("About regen prompt"), _(
+                "Template for Regenerate broader context in the card preview. Stored separately from the generate prompt."
+            )),
+            {
+                text = _("Note type: ") .. note_type_line,
+                dim  = true,
+                callback = function()
+                    show_settings_help(_(
+                        "Prompts are edited for your Wiki Card note type from Card defaults → Wiki Card.\n\nTo use a different note type, change it there — custom prompts migrate automatically when possible."
+                    ) .. "\n\n" .. _("Current: ") .. edit_model)
+                end,
+            },
+            {
+                text = _("View default generate prompt"),
+                dim  = true,
+                callback = function()
+                    open_prompt_preview(_("Default generate prompt"), function()
+                        return PromptBuilder.preview_generate_builtin(cfg, draft, edit_model)
+                    end)
+                end,
+            },
+            {
+                text = _("View default regen prompt"),
+                dim  = true,
+                callback = function()
+                    open_prompt_preview(_("Default regen prompt"), function()
+                        return PromptBuilder.preview_regen_builtin(cfg, draft, edit_model)
+                    end)
+                end,
+            },
+            {
+                text = _("Modify prompt suffix…") .. " " .. suffix_button_label(suffix),
+                callback = edit_suffix,
+            },
+            {
+                text = _("Modify generate prompt…")
+                    .. " " .. custom_prompt_status(draft.custom_prompts, edit_model),
+                callback = function()
+                    edit_prompt_field(
+                        _("Custom generate prompt for ") .. edit_model,
+                        edit_model,
+                        _("Leave empty to use default profile"),
+                        true)
+                end,
+            },
+            {
+                text = _("Modify regen prompt…")
+                    .. " " .. custom_prompt_status(draft.custom_prompts, regen_key),
+                callback = function()
+                    edit_prompt_field(
+                        _("Custom regen prompt for ") .. edit_model,
+                        regen_key,
+                        _("Leave empty to use default regen profile"),
+                        true)
+                end,
+            },
+            {
+                text = _("Reset generate prompt"),
+                callback = function()
+                    if draft.custom_prompts then
+                        draft.custom_prompts[edit_model] = nil
+                    end
+                    reopen_prompts()
+                end,
+            },
+            {
+                text = _("Reset regen prompt"),
+                callback = function()
+                    if draft.custom_prompts then
+                        draft.custom_prompts[regen_key] = nil
+                    end
+                    reopen_prompts()
+                end,
+            },
+            {
+                text = _("Preview effective generate prompt"),
+                callback = function()
+                    open_prompt_preview(_("Effective generate prompt"), function()
+                        return PromptBuilder.preview_generate(cfg, draft, edit_model)
+                    end)
+                end,
+            },
+            {
+                text = _("Preview effective regen prompt"),
+                callback = function()
+                    open_prompt_preview(_("Effective regen prompt"), function()
+                        return PromptBuilder.preview_regen(cfg, draft, edit_model)
+                    end)
+                end,
+            },
+            {
+                text = _("View README"),
+                callback = function()
+                    close_menu_then(menu_instance, function()
+                        local ok, ReadmeViewer = pcall(require, "readme_viewer")
+                        if ok and ReadmeViewer.show_or_notify then
+                            ReadmeViewer.show_or_notify("prompts", {
+                                on_close = show_prompts,
+                            })
+                        else
+                            show_prompts()
+                        end
+                    end)
+                end,
+            },
+            {
+                text = _("Restore defaults"),
+                callback = function()
+                    draft.prompt_suffix = PROMPTS_DEFAULTS.prompt_suffix
+                    draft.custom_prompts = {}
+                    reopen_prompts()
+                end,
+            },
+            {
+                text = _("Save"),
+                callback = save_and_close,
+            },
+            {
+                text = _("Close without saving"),
+                callback = close_without_saving,
+            },
+            {
+                text = _("← Back"),
+                callback = function()
+                    if prompts_drafts_equal(draft, saved_snapshot) then
+                        close_menu_then(menu_instance, function()
+                            prompts_draft = nil
+                            show_ai_providers()
+                        end)
+                    else
+                        close_without_saving()
+                    end
+                end,
             },
         }
-        UIManager:show(sub_dlg)
+
+        menu_instance = open_settings_menu(_("Prompts & suffix"), item_table, function()
+            if not prompts_drafts_equal(draft, saved_snapshot) then
+                close_without_saving()
+            else
+                discard_and_close()
+            end
+        end)
     end
 
-    -- ── Submenu: Send routing extras ───────────────────────────────────
+    -- ── Deck routing (Wiki & Vocabulary) ───────────────────────────────
+
+    local function resolved_deck_for(card)
+        local base = AnkiSync.resolve_base_deck(cfg, card)
+        return AnkiSync.resolve_deck_name(cfg, card, base)
+    end
+
+    local function routing_preview_lines()
+        local book = current_book_title()
+        local wiki_card = {
+            book_title = book,
+            model      = CardDefaults.wiki_model({ anki = cfg }),
+        }
+        local vocab_card = {
+            book_title = book,
+            model      = CardDefaults.vocabulary_model({ anki = cfg }),
+        }
+        local lines = {}
+        if book == "" then
+            table.insert(lines, _("No book open — preview uses defaults only"))
+        else
+            table.insert(lines, _("Book: ") .. book)
+        end
+        table.insert(lines, _("Wiki → ") .. (resolved_deck_for(wiki_card) or ""))
+        table.insert(lines, _("Vocab → ") .. (resolved_deck_for(vocab_card) or ""))
+        return lines
+    end
+
+    local function routing_help_book()
+        local book = current_book_title()
+        if book == "" then
+            return _(
+                "No book is open. Open a book to preview subdeck routing. Book overrides match each card's book_title field exactly."
+            )
+        end
+        return _(
+            "This title comes from the open book's metadata. Book overrides must match this string exactly. It is also used when Append book title to deck name is ON.\n\nCurrent title: "
+        ) .. book
+    end
+
+    local function routing_help_for_card(card, defaults_label)
+        local resolved = resolved_deck_for(card) or ""
+        local subdeck_on = cfg.subdeck_by_book ~= false
+        local step3 = subdeck_on
+            and _("If Append book title is ON, adds ::Book Title to the parent deck segment.")
+            or _("Append book title is OFF — no subdeck suffix is added.")
+        return defaults_label .. _(" deck resolution:") .. "\n"
+            .. _("1. Default deck (Card defaults → ") .. defaults_label .. ")\n"
+            .. _("2. Book override for this title, if set\n")
+            .. "3. " .. step3 .. "\n\n"
+            .. _("Current result: ") .. resolved
+    end
 
     map_book_to_deck = function(book, parent_fn)
         book = (book or ""):match("^%s*(.-)%s*$") or ""
@@ -564,93 +762,290 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
             or CardDefaults.wiki_deck({ anki = cfg })
             or CardDefaults.vocabulary_deck({ anki = cfg })
             or ""
-        local deck_dlg
-        deck_dlg = InputDialog:new {
-            title      = _("Deck for current book"),
-            input      = existing,
-            input_hint = book,
-            buttons    = {{
-                {
-                    text     = _("Cancel"),
-                    callback = function()
-                        UIManager:close(deck_dlg)
-                        parent_fn()
-                    end,
-                },
-                {
-                    text             = _("Save"),
-                    is_enter_default = true,
-                    callback         = function()
-                        local deck = deck_dlg:getInputText() or ""
-                        UIManager:close(deck_dlg)
-                        cfg.per_book_decks = cfg.per_book_decks or {}
-                        cfg.per_book_decks[book] = deck
-                        save()
-                        UIManager:show(Notification:new {
-                            text    = _("Mapped ") .. book .. _(" → ") .. deck,
-                            timeout = 3,
-                        })
-                        parent_fn()
-                    end,
-                },
-            }},
-        }
-        UIManager:show(deck_dlg)
-        deck_dlg:onShowKeyboard()
+        local sample_card = { book_title = book }
+        DeckPicker.show(cfg, sample_card, function(chosen)
+            cfg.per_book_decks = cfg.per_book_decks or {}
+            cfg.per_book_decks[book] = chosen
+            save()
+            UIManager:show(Notification:new {
+                text    = book .. _(" → ") .. chosen,
+                timeout = 3,
+            })
+            parent_fn()
+        end, {
+            title        = _("Deck for cards from this book"),
+            current_deck = existing,
+            parent_fn    = parent_fn,
+        })
     end
 
-    show_send_routing_extras = function()
-        local sub_dlg
-        sub_dlg = ButtonDialog:new {
-            title   = _("Favorites & book overrides"),
-            buttons = {
-                {{ text = _("Toggle favorite: current deck"),
-                   callback = function()
-                       local names = CardDefaults.configured_deck_names({ anki = cfg })
-                       local d = names[1]
-                       if not d or d == "" then return end
-                       cfg.favorite_decks = cfg.favorite_decks or {}
-                       local found = false
-                       for i, v in ipairs(cfg.favorite_decks) do
-                           if v == d then
-                               table.remove(cfg.favorite_decks, i)
-                               found = true
-                               break
-                           end
-                       end
-                       if not found then
-                           table.insert(cfg.favorite_decks, d)
-                       end
-                       save()
-                       UIManager:show(Notification:new {
-                           text = found and _("Removed favorite") or _("Added favorite"),
-                           timeout = 2,
-                       })
-                   end }},
-                {{ text = _("Map deck to current book"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       local book = current_book_title()
-                       if book == "" then
-                           UIManager:show(Notification:new {
-                               text    = _("No book open — enter the book title manually."),
-                               timeout = 3,
-                           })
-                           edit_field("Book title", "_map_book_title", "Book title",
-                               show_send_routing_extras)
-                       else
-                           map_book_to_deck(book, show_send_routing_extras)
-                       end
-                   end }},
-                {{ text = _("Back"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       local back_fn = send_routing_extras_parent_fn or show_main
-                       back_fn()
-                   end }},
+    show_book_overrides = function()
+        local parent_fn = show_where_cards_go
+        local menu_instance
+
+        local function reopen()
+            show_book_overrides()
+        end
+
+        local item_table = {}
+        local books = {}
+        if type(cfg.per_book_decks) == "table" then
+            for book, deck in pairs(cfg.per_book_decks) do
+                if book and book ~= "" then
+                    books[#books + 1] = { book = book, deck = deck or "" }
+                end
+            end
+        end
+        table.sort(books, function(a, b) return a.book < b.book end)
+
+        local cur_book = current_book_title()
+        if cur_book ~= "" then
+            item_table[#item_table + 1] = {
+                text = _("Add override for «") .. cur_book .. "»…",
+                callback = function()
+                    UIManager:close(menu_instance)
+                    map_book_to_deck(cur_book, show_book_overrides)
+                end,
+            }
+        end
+
+        for _i, entry in ipairs(books) do
+            local book = entry.book
+            local deck = entry.deck
+            item_table[#item_table + 1] = {
+                text = book .. " → " .. (deck ~= "" and deck or _("(not set)")),
+                callback = function()
+                    UIManager:close(menu_instance)
+                    local action_dlg
+                    action_dlg = ButtonDialog:new {
+                        title   = book,
+                        buttons = {
+                            {{ text = _("Change deck…"),
+                               callback = function()
+                                   UIManager:close(action_dlg)
+                                   map_book_to_deck(book, show_book_overrides)
+                               end }},
+                            {{ text = _("Remove override"),
+                               callback = function()
+                                   UIManager:close(action_dlg)
+                                   UIManager:show(ConfirmBox:new {
+                                       text = _("Remove deck override for this book?"),
+                                       ok_callback = function()
+                                           if cfg.per_book_decks then
+                                               cfg.per_book_decks[book] = nil
+                                           end
+                                           save()
+                                           reopen()
+                                       end,
+                                       cancel_callback = function() reopen() end,
+                                   })
+                               end }},
+                            {{ text = _("Back"),
+                               callback = function()
+                                   UIManager:close(action_dlg)
+                                   reopen()
+                               end }},
+                        },
+                    }
+                    UIManager:show(action_dlg)
+                end,
+            }
+        end
+
+        if #books == 0 and cur_book == "" then
+            item_table[#item_table + 1] = {
+                text = _("No book overrides saved"),
+                callback = function() reopen() end,
+            }
+        end
+
+        item_table[#item_table + 1] = {
+            text = _("Add by book title…"),
+            callback = function()
+                UIManager:close(menu_instance)
+                edit_field("Book title", "_map_book_title", "Book title", show_book_overrides)
+            end,
+        }
+
+        item_table[#item_table + 1] = {
+            text = _("← Back"),
+            callback = function()
+                Nav.after_close(function()
+                    if menu_instance then UIManager:close(menu_instance) end
+                end, parent_fn)
+            end,
+        }
+
+        menu_instance = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
+            title    = _("Book overrides"),
+            subtitle = _("Replaces Wiki/Vocabulary default for matching book titles"),
+            item_table = item_table,
+        }), function()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, parent_fn)
+        end)
+        Nav.show(menu_instance)
+    end
+
+    show_favorite_decks = function()
+        local menu_instance
+        cfg.favorite_decks = cfg.favorite_decks or {}
+        local item_table = {}
+
+        for _i, deck in ipairs(cfg.favorite_decks) do
+            local deck_name = deck
+            item_table[#item_table + 1] = {
+                text = "★ " .. deck_name,
+                callback = function()
+                    UIManager:close(menu_instance)
+                    UIManager:show(ConfirmBox:new {
+                        text = _("Remove from favorites?") .. "\n" .. deck_name,
+                        ok_callback = function()
+                            for i, v in ipairs(cfg.favorite_decks) do
+                                if v == deck_name then
+                                    table.remove(cfg.favorite_decks, i)
+                                    break
+                                end
+                            end
+                            save()
+                            show_favorite_decks()
+                        end,
+                        cancel_callback = function() show_favorite_decks() end,
+                    })
+                end,
+            }
+        end
+
+        if #cfg.favorite_decks == 0 then
+            item_table[#item_table + 1] = {
+                text = _("No favorite decks"),
+                callback = function() show_favorite_decks() end,
+            }
+        end
+
+        item_table[#item_table + 1] = {
+            text = _("Add favorite deck…"),
+            callback = function()
+                UIManager:close(menu_instance)
+                DeckPicker.show(cfg, nil, function(chosen)
+                    local found = false
+                    for _j, v in ipairs(cfg.favorite_decks) do
+                        if v == chosen then found = true; break end
+                    end
+                    if not found then
+                        cfg.favorite_decks[#cfg.favorite_decks + 1] = chosen
+                        save()
+                    end
+                    show_favorite_decks()
+                end, {
+                    title     = _("Add favorite deck"),
+                    parent_fn = show_favorite_decks,
+                })
+            end,
+        }
+
+        item_table[#item_table + 1] = {
+            text = _("← Back"),
+            callback = function()
+                Nav.after_close(function()
+                    if menu_instance then UIManager:close(menu_instance) end
+                end, show_deck_picker_shortcuts)
+            end,
+        }
+
+        menu_instance = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
+            title    = _("Favorite decks"),
+            subtitle = _("At top of deck picker; does not change automatic routing"),
+            item_table = item_table,
+        }), function()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, show_deck_picker_shortcuts)
+        end)
+        Nav.show(menu_instance)
+    end
+
+    show_deck_picker_shortcuts = function()
+        local menu_instance
+        local fav_count = 0
+        if type(cfg.favorite_decks) == "table" then
+            fav_count = #cfg.favorite_decks
+        end
+        local recent_str = _("(none)")
+        if type(cfg.recent_decks) == "table" and #cfg.recent_decks > 0 then
+            recent_str = table.concat(cfg.recent_decks, ", ")
+            if #recent_str > 55 then
+                recent_str = recent_str:sub(1, 52) .. "…"
+            end
+        end
+
+        local item_table = {
+            info_menu_item(_("About deck picker shortcuts"), _(
+                "Favorite decks and recent decks appear at the top when you manually choose a deck at send time.\n\nThey do not change automatic routing, one-tap send, or Where cards go settings."
+            )),
+            info_menu_item(_("Recent: ") .. recent_str, _(
+                "The last 5 decks you picked manually appear first in the deck picker. They are saved automatically when you send from the card viewer and cannot be edited here."
+            )),
+            {
+                text = _("Favorite decks…") .. " (" .. tostring(fav_count) .. ")",
+                callback = function()
+                    close_menu_then(menu_instance, show_favorite_decks)
+                end,
+            },
+            {
+                text = _("← Back"),
+                callback = function() close_menu_then(menu_instance, show_defaults) end,
             },
         }
-        UIManager:show(sub_dlg)
+
+        menu_instance = open_settings_menu(_("Deck picker shortcuts"), item_table, show_defaults)
+    end
+
+    show_where_cards_go = function()
+        local menu_instance
+        local subdeck_on = cfg.subdeck_by_book ~= false
+        local book = current_book_title()
+        local wiki_card = {
+            book_title = book,
+            model      = CardDefaults.wiki_model({ anki = cfg }),
+        }
+        local vocab_card = {
+            book_title = book,
+            model      = CardDefaults.vocabulary_model({ anki = cfg }),
+        }
+        local preview = routing_preview_lines()
+
+        local item_table = {
+            info_menu_item(preview[1], routing_help_book()),
+            info_menu_item(preview[2], routing_help_for_card(wiki_card, _("Wiki Card"))),
+            info_menu_item(preview[3], routing_help_for_card(vocab_card, _("Vocabulary Card"))),
+            info_menu_item(_("Wiki & Vocabulary only"), _(
+                "Memorization cards use Card defaults → Memorization Card. These routing rules do not apply to them."
+            )),
+            {
+                text = toggle_label(subdeck_on, _("Append book title to deck name")),
+                callback = function()
+                    cfg.subdeck_by_book = not subdeck_on
+                    save()
+                    Nav.after_close(function()
+                        if menu_instance then UIManager:close(menu_instance) end
+                    end, show_where_cards_go)
+                end,
+            },
+            {
+                text = _("Book overrides…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_book_overrides)
+                end,
+            },
+            {
+                text = _("← Back"),
+                callback = function() close_menu_then(menu_instance, show_defaults) end,
+            },
+        }
+
+        menu_instance = open_settings_menu(_("Where cards go"), item_table, show_defaults)
     end
 
     -- hook per-book deck save via transform on _map_book_title - use edit_field wrapper
@@ -962,6 +1357,20 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                            parent_fn    = show_defaults_wiki,
                        })
                    end }},
+                {{ text = _("Hub menu label: ") .. (function()
+                       local lbl = CardDefaults.wiki_hub_label({ anki = cfg })
+                       if #lbl > 22 then return lbl:sub(1, 22) .. ".." end
+                       return lbl
+                   end)(),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       edit_field("Hub menu label", "wiki_card_hub_label",
+                           PluginConstants.WIKI_CARD_LABEL, show_defaults_wiki,
+                           function(new_val)
+                               local trimmed = (new_val or ""):match("^%s*(.-)%s*$") or ""
+                               cfg.wiki_card_hub_label = trimmed ~= "" and trimmed or nil
+                           end)
+                   end }},
                 {{ text = toggle_label(wiki_as, _("One-tap send (Wiki)")),
                    callback = function()
                        cfg.auto_send_wiki = not wiki_as
@@ -1026,6 +1435,20 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                        UIManager:close(sub_dlg)
                        edit_field("Preferred dictionary", "vocabulary_preferred_dictionary",
                            _("StarDict name, or leave empty"), show_defaults_vocab)
+                   end }},
+                {{ text = _("Hub menu label: ") .. (function()
+                       local lbl = CardDefaults.vocabulary_hub_label({ anki = cfg })
+                       if #lbl > 22 then return lbl:sub(1, 22) .. ".." end
+                       return lbl
+                   end)(),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       edit_field("Hub menu label", "vocabulary_card_hub_label",
+                           PluginConstants.VOCABULARY_CARD_LABEL, show_defaults_vocab,
+                           function(new_val)
+                               local trimmed = (new_val or ""):match("^%s*(.-)%s*$") or ""
+                               cfg.vocabulary_card_hub_label = trimmed ~= "" and trimmed or nil
+                           end)
                    end }},
                 {{ text = toggle_label(vocab_as, _("One-tap send (Vocabulary)")),
                    callback = function()
@@ -1112,36 +1535,6 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
         UIManager:show(sub_dlg)
     end
 
-    show_send_routing = function()
-        local sub_dlg
-        local subdeck_on = cfg.subdeck_by_book ~= false
-
-        local function reopen()
-            Nav.after_close(function() UIManager:close(sub_dlg) end, show_send_routing)
-        end
-
-        sub_dlg = ButtonDialog:new {
-            title   = _("Send routing"),
-            buttons = {
-                {{ text = toggle_label(subdeck_on, _("Subdeck by book title")),
-                   callback = function()
-                       cfg.subdeck_by_book = not subdeck_on
-                       save()
-                       reopen()
-                   end }},
-                {{ text = _("Favorites & book overrides…"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       send_routing_extras_parent_fn = show_send_routing
-                       show_send_routing_extras()
-                   end }},
-                {{ text = _("Back"),
-                   callback = function() UIManager:close(sub_dlg); show_defaults() end }},
-            },
-        }
-        UIManager:show(sub_dlg)
-    end
-
     show_defaults = function()
         local sub_dlg
         sub_dlg = ButtonDialog:new {
@@ -1162,10 +1555,15 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
                        UIManager:close(sub_dlg)
                        show_defaults_mem()
                    end }},
-                {{ text = _("Send routing…"),
+                {{ text = _("Where cards go…"),
                    callback = function()
                        UIManager:close(sub_dlg)
-                       show_send_routing()
+                       show_where_cards_go()
+                   end }},
+                {{ text = _("Deck picker shortcuts…"),
+                   callback = function()
+                       UIManager:close(sub_dlg)
+                       show_deck_picker_shortcuts()
                    end }},
                 {{ text = _("Back"),
                    callback = function() UIManager:close(sub_dlg); show_main() end }},
@@ -1221,37 +1619,53 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
     end
 
     show_tags = function()
-        local sub_dlg
+        local menu_instance
         local tags_on = cfg.tags_enabled ~= false
+        local tag_list_str = short("tags")
 
-        sub_dlg = ButtonDialog:new {
-            title   = _("Tags"),
-            buttons = {
-                {{ text = toggle_label(tags_on, _("Tags on new cards")),
-                   callback = function()
-                       cfg.tags_enabled = not tags_on
-                       save()
-                       UIManager:close(sub_dlg)
-                       show_tags()
-                   end }},
-                {{ text = _("Tag list: ") .. short("tags"),
-                   callback = function()
-                       UIManager:close(sub_dlg)
-                       edit_field("Tags (comma-sep)", "tags", "KOReader",
-                           show_tags, function(new_val)
-                               local tag_list = {}
-                               for t in new_val:gmatch("[^,]+") do
-                                   local trimmed = t:match("^%s*(.-)%s*$")
-                                   if trimmed ~= "" then table.insert(tag_list, trimmed) end
-                               end
-                               cfg.tags = #tag_list > 0 and tag_list or { "KOReader" }
-                           end)
-                   end }},
-                {{ text = _("Back"),
-                   callback = function() UIManager:close(sub_dlg); show_main() end }},
+        local item_table = {
+            info_menu_item(_("About tags"), tags_on
+                and _(
+                    "Tags on new cards is ON. The tag list below is applied to every card sent via AnkiConnect.\n\nEdit as comma-separated names. Default is KOReader if the list is empty."
+                )
+                or _(
+                    "Tags on new cards is OFF. No tags are sent to Anki, even if a tag list is configured.\n\nTurn ON to apply the tag list on send."
+                )),
+            {
+                text = toggle_label(tags_on, _("Tags on new cards")),
+                callback = function()
+                    cfg.tags_enabled = not tags_on
+                    save()
+                    Nav.after_close(function()
+                        if menu_instance then UIManager:close(menu_instance) end
+                    end, show_tags)
+                end,
+            },
+            {
+                text = _("Tag list: ") .. tag_list_str,
+                callback = function()
+                    close_menu_then(menu_instance, function()
+                        edit_field("Tags (comma-sep)", "tags", "KOReader",
+                            show_tags, function(new_val)
+                                local tag_list = {}
+                                for t in new_val:gmatch("[^,]+") do
+                                    local trimmed = t:match("^%s*(.-)%s*$")
+                                    if trimmed ~= "" then
+                                        tag_list[#tag_list + 1] = trimmed
+                                    end
+                                end
+                                cfg.tags = #tag_list > 0 and tag_list or { "KOReader" }
+                            end)
+                    end)
+                end,
+            },
+            {
+                text = _("← Back"),
+                callback = function() close_menu_then(menu_instance, show_main) end,
             },
         }
-        UIManager:show(sub_dlg)
+
+        menu_instance = open_settings_menu(_("Tags"), item_table, show_main)
     end
 
     -- ── Submenu: Sync ────────────────────────────────────────────────────
@@ -1297,45 +1711,81 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
 
     show_main = function()
         local cur_provider = cfg.text_provider or "dashscope"
+        local menu_instance
 
-        local dlg
-            dlg = ButtonDialog:new {
-            title   = _("Settings"),
-            buttons = {
-                {{ text = _("Card defaults…"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       show_defaults()
-                   end }},
-                {{ text = _("Anki connection…"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       show_anki_connection()
-                   end }},
-                {{ text = _("Tags…"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       show_tags()
-                   end }},
-                {{ text = _("Memorization options…"),
-                   callback = function()
-                       UIManager:close(dlg)
-                       memorization_parent_fn = show_main
-                       show_memorization()
-                   end }},
-                {{ text = _("AI Settings") .. "  (" .. cur_provider .. ")",
-                   callback = function() UIManager:close(dlg); show_ai_providers() end }},
-                {{ text = _("Sync…"),
-                   callback = function() UIManager:close(dlg); show_sync() end }},
-                {{ text = settings_parent_fn and _("Back") or _("Close"),
-                   callback = function()
-                       Nav.after_close(function() UIManager:close(dlg) end, function()
-                           if settings_parent_fn then settings_parent_fn() end
-                       end)
-                   end }},
+        local function close_settings()
+            Nav.after_close(function()
+                if menu_instance then UIManager:close(menu_instance) end
+            end, function()
+                if settings_parent_fn then settings_parent_fn() end
+            end)
+        end
+
+        local item_table = {
+            info_menu_item(_("About Settings"), _(
+                "Card defaults: note types, decks, one-tap send, and deck routing.\nAnki connection: AnkiConnect URL and sync after send.\nTags: tags applied when cards are sent.\nMemorization options: how text is split (not deck routing).\nAI Settings: Wiki Card (AI) generation.\nSync: background send when WiFi is on and cloud backup.\n\nGray rows in any submenu — tap for help."
+            )),
+            {
+                text = _("View settings guide"),
+                dim  = true,
+                callback = function()
+                    close_menu_then(menu_instance, function()
+                        local ok, ReadmeViewer = pcall(require, "readme_viewer")
+                        if ok and ReadmeViewer.show_or_notify then
+                            ReadmeViewer.show_or_notify("settings", {
+                                on_close = show_main,
+                            })
+                        else
+                            show_main()
+                        end
+                    end)
+                end,
+            },
+            {
+                text = _("Card defaults…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_defaults)
+                end,
+            },
+            {
+                text = _("Anki connection…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_anki_connection)
+                end,
+            },
+            {
+                text = _("Tags…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_tags)
+                end,
+            },
+            {
+                text = _("Memorization options…"),
+                callback = function()
+                    memorization_parent_fn = show_main
+                    close_menu_then(menu_instance, show_memorization)
+                end,
+            },
+            {
+                text = _("AI Settings") .. "  (" .. cur_provider .. ")",
+                callback = function()
+                    close_menu_then(menu_instance, show_ai_providers)
+                end,
+            },
+            {
+                text = _("Sync…"),
+                callback = function()
+                    close_menu_then(menu_instance, show_sync)
+                end,
+            },
+            {
+                text = settings_parent_fn and _("← Back") or _("Close"),
+                callback = close_settings,
             },
         }
-        UIManager:show(dlg)
+
+        local on_close = settings_parent_fn and settings_parent_fn or function() end
+        menu_instance = open_settings_menu(_("Settings"), item_table, on_close)
     end
 
     show_main()

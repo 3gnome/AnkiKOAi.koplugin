@@ -20,7 +20,7 @@ Anki note type name: **Wiki Card**
 
 ## Deck
 
-Set under **Card defaults → Wiki Card → Default deck** (pick from Anki). With **Send routing → Subdeck by book title** ON, cards go to `YourDeck::Book Title`.
+Set under **Card defaults → Wiki Card → Default deck** (pick from Anki). With **Where cards go… → Append book title to deck name** ON, cards go to `YourDeck::Book Title`.
 
 ## Plugin settings
 
@@ -30,9 +30,9 @@ Configure under **AnkiKOAi → Settings → Card defaults → Wiki Card**:
 - **Default deck** — pick from Anki
 - **One-tap send (Wiki)** — skip note-type, deck, and review prompts; sends to your default deck
 - Requires AI API key and Wi‑Fi for generation
-- **Wiki sources** should be ON (**Settings → AI Settings**)
+- **Wiki sources** should be ON (**Settings → AI Settings** — tap **About Wiki sources** for details)
 
-Send-time options (subdeck by book, per-book overrides): **Card defaults → Send routing**.
+Automatic routing (subdeck by book, per-book overrides): **Card defaults → Where cards go…**.
 
 ## Templates and CSS
 

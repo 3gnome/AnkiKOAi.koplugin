@@ -31,11 +31,16 @@ local MODE_MEM   = "memorization"
 
 local MODE_ORDER = { MODE_WIKI, MODE_VOCAB, MODE_MEM }
 
-local MODE_LABELS = {
-    [MODE_WIKI]  = PluginConstants.WIKI_CARD_LABEL,
-    [MODE_VOCAB] = PluginConstants.VOCABULARY_CARD_LABEL,
-    [MODE_MEM]   = PluginConstants.MEMORIZATION_CARD_LABEL,
-}
+local function mode_label(config, mode)
+    if mode == MODE_WIKI then
+        return CardDefaults.wiki_hub_label(config)
+    elseif mode == MODE_VOCAB then
+        return CardDefaults.vocabulary_hub_label(config)
+    elseif mode == MODE_MEM then
+        return PluginConstants.MEMORIZATION_CARD_LABEL
+    end
+    return mode
+end
 
 local function normalize(s)
     return (s or ""):lower():match("^%s*(.-)%s*$")
@@ -59,8 +64,8 @@ local function cambridge_url(phrase, config)
     return "https://dictionary.cambridge.org/dictionary/english/" .. slug
 end
 
-local function mode_button_label(mode)
-    return _("Mode: ") .. (MODE_LABELS[mode] or mode) .. " " .. _("(Tap to change)")
+local function mode_button_label(config, mode)
+    return _("Mode: ") .. mode_label(config, mode) .. " " .. _("(Tap to change)")
 end
 
 local function next_mode(mode)
@@ -178,7 +183,7 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
     local generate_count = #selected_for_generate()
 
     table.insert(items, {
-        text     = mode_button_label(send_mode),
+        text     = mode_button_label(config, send_mode),
         bold     = true,
         callback = function()
             send_mode = next_mode(send_mode)

@@ -47,13 +47,13 @@ Minimum checklist:
 
 On the device (recommended on Kobo):
 
-1. Open **AnkiKOAi → Settings** (or tap Settings from the AnkiKOAi hub menu).
+1. Open **AnkiKOAi → Settings** (or tap Settings from the AnkiKOAi hub menu). Gray rows are informational — **tap gray rows for help.**
 2. Open **Anki connection…** → set **AnkiConnect URL** to `http://YOUR_PC_LAN_IP:8765` (your PC’s Wi‑Fi address, **not** `localhost`) → **Test Connection** (Anki must be running).
 3. Open **Card defaults…**:
    - **Wiki Card…** → note type **Wiki Card**, default deck `English::Koreader` (or yours)
    - **Vocabulary Card…** → note type **Vocabulary Card**, default deck (e.g. `2026 Vocabulary`)
    - **Memorization Card…** → parent deck **Memorize**, note type **Memorization**
-   - **Send routing…** → leave **Subdeck by book title** ON if you want `Deck::Book Title`
+   - **Where cards go…** → leave **Append book title to deck name** ON if you want `Deck::Book Title`
 4. Under **AI Settings → API Keys**, paste your provider key (Wiki Card only).
 
 Alternatively, copy `configuration.lua.sample` to `configuration.lua` on a PC and edit there before syncing the plugin folder to the device. On-device settings **override** the file after you save them once.
@@ -129,4 +129,5 @@ See [Anki: Memorization deck](anki-memorization.md) for study routine and filter
 - Edit saved cards: **My Cards**
 - Tune memorization split/context: **AnkiKOAi → Settings → Memorization options…**
 - Tune per-type decks, note types, and one-tap send: **AnkiKOAi → Settings → Card defaults…**
-- Send routing (subdeck by book): **Card defaults → Send routing…**
+- Deck routing (subdeck by book): **Card defaults → Where cards go…**
+- Favorite decks (manual send): **Card defaults → Deck picker shortcuts…**

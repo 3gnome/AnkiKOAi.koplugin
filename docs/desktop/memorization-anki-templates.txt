@@ -601,7 +601,7 @@ Plugin URL: http://YOUR_PC_LAN_IP:8765   (not localhost from Kindle)
 Wiki deck:        Card defaults → Wiki Card (anki.wiki_deck)
 Vocabulary deck:  Card defaults → Vocabulary Card (anki.vocabulary_deck)
 Memorization:     Card defaults → Memorization Card (anki.memorize_parent_deck)
-Subdeck by book:  Card defaults → Send routing
+Subdeck by book:  Card defaults → Where cards go
 (Subdecks auto-created per highlight, e.g. Memorize::Alice's Adventures in Wonderland::p. 10)
 
 

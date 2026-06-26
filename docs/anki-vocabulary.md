@@ -189,7 +189,7 @@ Configure on device under **AnkiKOAi → Settings → Card defaults**:
 | Note type | Wiki Card | Card defaults → Wiki Card… |
 | Default deck | English::Koreader | Card defaults → Wiki Card… |
 | One-tap send (Wiki) | OFF | Card defaults → Wiki Card… |
-| Subdeck by book title | ON | Card defaults → Send routing… |
+| Subdeck by book title | ON | Card defaults → Where cards go… |
 | Tags | KOReader | Settings → Tags… |
 | Wiki sources for AI | ON | Settings → AI Settings |
 | Sync to AnkiWeb after send | ON | Settings → Anki connection… |

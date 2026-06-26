@@ -190,4 +190,29 @@ function PromptBuilder.preview_regen(cfg, draft, model_name)
         PromptBuilder.sample_preview_vars(preview_cfg))
 end
 
+-- Built-in templates only (custom_prompts ignored for template selection).
+local function preview_config_builtin(cfg, draft)
+    return PromptBuilder.preview_config(cfg, {
+        prompt_suffix  = draft.prompt_suffix,
+        custom_prompts = {},
+    })
+end
+
+function PromptBuilder.preview_generate_builtin(cfg, draft, model_name)
+    local preview_cfg = preview_config_builtin(cfg, draft)
+    model_name = NoteTypeProfiles.normalize_model_name(model_name)
+    return PromptBuilder.build_generate(
+        preview_cfg, model_name,
+        PromptBuilder.preview_field_names(model_name),
+        PromptBuilder.sample_preview_vars(preview_cfg))
+end
+
+function PromptBuilder.preview_regen_builtin(cfg, draft, model_name)
+    local preview_cfg = preview_config_builtin(cfg, draft)
+    model_name = NoteTypeProfiles.normalize_model_name(model_name)
+    return PromptBuilder.build_text_regen(
+        preview_cfg, model_name,
+        PromptBuilder.sample_preview_vars(preview_cfg))
+end
+
 return PromptBuilder

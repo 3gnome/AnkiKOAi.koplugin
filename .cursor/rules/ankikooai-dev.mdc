@@ -15,7 +15,7 @@ The user may also attach **`@LOCAL_DEV.md`** explicitly.
 ## Quick reminders
 
 - Plugin code: `*.lua` at repo root. Settings UI: `settings_viewer.lua`. Deck/model API: `card_defaults.lua`.
-- **Card defaults** = per-type note type + deck; **Send routing** = subdeck/favorites/per-book only.
+- **Card defaults** = per-type note type + deck; **hub labels** = `wiki_card_hub_label` / `vocabulary_card_hub_label` (empty → `PluginConstants`); **Where cards go** = subdeck/per-book overrides (Wiki/Vocab); **Deck picker shortcuts** = favorites/recent for manual send; **Settings menus** = gray dim rows for tap-to-help (`SETTINGS_HELP_SUBTITLE`); **Prompts & suffix** = wiki note type only, built-in vs effective preview helpers in `prompt_builder.lua`.
 - Dev launch: `bash start.sh --emulator alice.epub` (WSL). Use `tee ~/koreader-emulator.log` for logs.
 - `addToHighlightDialog` callbacks must not return `nil` — use `show_in_highlight_dialog_func`.
 - Never commit `configuration.lua`, `LOCAL_DEV.md`, API keys, or `*_settings.json`.

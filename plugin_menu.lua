@@ -105,6 +105,15 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
                     show_readme(readme_id)
                 end,
             },
+            {
+                text     = _("← Back"),
+                callback = function()
+                    local menu = menu_ref[1]
+                    if menu and menu.onClose then
+                        menu:onClose()
+                    end
+                end,
+            },
         }
     end
 
@@ -137,12 +146,12 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
         section_label(_("Create from highlight")),
     }
 
-    add_card_hub_entry(items, PluginConstants.WIKI_CARD_LABEL, "wiki", "wiki", function()
+    add_card_hub_entry(items, CardDefaults.wiki_hub_label(config), "wiki", "wiki", function()
         if actions.on_wiki_card then
             actions.on_wiki_card(reopen_hub)
         end
     end)
-    add_card_hub_entry(items, PluginConstants.VOCABULARY_CARD_LABEL, "vocabulary", "vocabulary", function()
+    add_card_hub_entry(items, CardDefaults.vocabulary_hub_label(config), "vocabulary", "vocabulary", function()
         if actions.on_vocabulary_card then
             actions.on_vocabulary_card(reopen_hub)
         end

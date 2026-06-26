@@ -305,7 +305,7 @@ memorize = {
 },
 ```
 
-On-device keys for Card defaults: `wiki_deck`, `vocabulary_deck`, `memorize_parent_deck`, `memorize_model`, `auto_send_memorization`, `memorize_quick_highlight_button`, `auto_send_skip_hub_submenu`. Send routing: `subdeck_by_book`, `per_book_decks`.
+On-device keys for Card defaults: `wiki_deck`, `vocabulary_deck`, `memorize_parent_deck`, `memorize_model`, `auto_send_memorization`, `memorize_quick_highlight_button`, `auto_send_skip_hub_submenu`. Where cards go: `subdeck_by_book`, `per_book_decks`. Deck picker shortcuts: `favorite_decks`, `recent_decks`.
 
 Tags added automatically:
 

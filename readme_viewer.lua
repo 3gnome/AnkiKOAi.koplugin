@@ -68,6 +68,13 @@ ReadmeViewer.DOCS = {
             guide = "docs/prompts-and-suffix.md",
         },
     },
+    settings = {
+        title = _("Settings — help"),
+        files = { "docs/in-app/settings-ui.md" },
+        desktop = {
+            guide = "docs/plugin-configuration.md",
+        },
+    },
 }
 
 ReadmeViewer.MODE_IDS = {
