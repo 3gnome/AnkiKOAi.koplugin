@@ -67,10 +67,12 @@ function SendFlow.can_quick_send(config, card, opts)
     return deck and deck ~= ""
 end
 
-local function finish_send(config, card, deck, model, ui, done)
+local function finish_send(config, card, deck, model, ui, done, opts)
+    opts = opts or {}
     local ok, err_or_suffix = AnkiSync.send_card(config, card, {
-        deck  = deck,
-        model = model,
+        deck      = deck,
+        model     = model,
+        skip_sync = opts.skip_sync,
     })
     if ok then
         if card then
@@ -107,7 +109,7 @@ function SendFlow.execute_send(config, card, deck, model, ui, done, opts)
 
     local function proceed()
         UiBusy.run(_("Sending to Anki…"), function()
-            finish_send(config, card, deck, model, ui, done)
+            finish_send(config, card, deck, model, ui, done, opts)
         end)
     end
 

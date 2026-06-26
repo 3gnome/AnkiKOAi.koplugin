@@ -160,6 +160,52 @@ function DictionaryLookup.lookup(ui, word)
     return entries[1]
 end
 
+-- Reuse the definition already shown in KOReader's DictQuickLookup popup.
+-- Returns nil when preferred_dictionary is set but not among popup results
+-- (caller should run a fresh StarDict lookup with the same settings).
+function DictionaryLookup.lookup_from_popup(popup, opts)
+    opts = opts or {}
+    if not popup then return nil end
+
+    local word = popup.displayword or popup.lookupword or popup.word
+    word = (word or ""):match("^%s*(.-)%s*$") or ""
+    if word == "" then return nil end
+
+    local preferred = opts.preferred_dictionary
+    local results = popup.results
+    if type(results) ~= "table" or #results == 0 then
+        if popup.definition and popup.definition ~= "" then
+            local def = strip_html(tostring(popup.definition), true)
+            if def ~= "" then
+                return {
+                    word       = word,
+                    definition = def,
+                    dict       = popup.dictionary or "",
+                    preview    = preview_text(def),
+                }
+            end
+        end
+        return nil
+    end
+
+    local function entry_at(index)
+        return normalize_entry(results[index], word)
+    end
+
+    if preferred and preferred ~= "" then
+        for i = 1, #results do
+            if results[i].dict == preferred then
+                return entry_at(i)
+            end
+        end
+        return nil
+    end
+
+    local idx = tonumber(popup.dict_index) or 1
+    if idx < 1 or idx > #results then idx = 1 end
+    return entry_at(idx)
+end
+
 function DictionaryLookup.show_picker(entries, lookup_word, on_select, opts)
     opts = opts or {}
     lookup_word = lookup_word or ""

@@ -654,6 +654,8 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
     end
 
     highlight_module:onClose()
+    -- Selection is saved; release before lookup/send so page turns work again.
+    release_highlight_for_reading(highlight_module)
 
     local anki_cfg = get_anki_config()
     local default_model = CardFields.default_vocabulary_model(CONFIGURATION)
@@ -733,14 +735,9 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
                 on_change_definition = function()
                     if not DictionaryLookup then return end
                     if viewer_ref[1] then UIManager:close(viewer_ref[1]) end
-                    local loading2 = Notification:new {
-                        text    = _("Dictionary lookup: ") .. (c.phrase or lookup_word),
-                        timeout = 30,
-                    }
-                    UIManager:show(loading2)
-                    UIManager:scheduleIn(0.05, function()
-                        UIManager:close(loading2)
-                        local ok, err = DictionaryLookup.pick(ui, c.phrase or lookup_word,
+                    local word = c.phrase or lookup_word
+                    UiBusy.run(_("Dictionary lookup: ") .. word, function()
+                        local ok, err = DictionaryLookup.pick(ui, word,
                             function(lookup)
                                 apply_lookup(c, lookup, show_back_flag)
                                 viewer_ref[1] = make_viewer(c, show_back_flag)
@@ -767,7 +764,6 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
             end
             if CardDefaults.auto_send_vocabulary(CONFIGURATION) then
                 SendFlow.quick_send(anki_cfg, card, function(ok, _err)
-                    release_highlight_for_reading(highlight_module)
                     if ok then
                         UIManager:show(Notification:new {
                             text    = _("Vocabulary card sent to Anki"),
@@ -776,9 +772,13 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
                     else
                         viewer_ref[1] = make_viewer(card, false)
                     end
-                end, { ui = ui, use_configured_deck = true })
+                end, {
+                    ui = ui,
+                    use_configured_deck = true,
+                    -- AnkiWeb sync via AnkiConnect can block the reader for minutes.
+                    skip_sync = Device:hasWifiToggle() and not Device.isEmulator,
+                })
             else
-                release_highlight_for_reading(highlight_module)
                 UIManager:show(Notification:new {
                     text    = _("Saved locally. Send from My Cards when Anki is available."),
                     timeout = 4,
@@ -798,18 +798,12 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
             })
             return
         end
-        local loading = Notification:new {
-            text    = _("Dictionary lookup: ") .. phrase,
-            timeout = 30,
+        local pick_opts = {
+            preferred_dictionary = CardDefaults.vocabulary_dictionary(CONFIGURATION),
+            auto_pick = CardDefaults.auto_send_vocabulary(CONFIGURATION),
+            parent_fn = flow_opts.parent_fn,
         }
-        UIManager:show(loading)
-        UIManager:scheduleIn(0.05, function()
-            UIManager:close(loading)
-            local pick_opts = {
-                preferred_dictionary = CardDefaults.vocabulary_dictionary(CONFIGURATION),
-                auto_pick = CardDefaults.auto_send_vocabulary(CONFIGURATION),
-                parent_fn = flow_opts.parent_fn,
-            }
+        UiBusy.run(_("Dictionary lookup: ") .. phrase, function()
             local ok, err = DictionaryLookup.pick(ui, phrase, function(lookup)
                 open_dictionary_card(chosen_model, lookup)
             end, pick_opts)
@@ -823,11 +817,19 @@ local function run_dictionary_vocabulary_flow(hl, ctx, ui, flow_opts)
         end)
     end
 
+    local function start_vocab_with_model(chosen_model)
+        if flow_opts.prefill_lookup then
+            open_dictionary_card(chosen_model, flow_opts.prefill_lookup)
+        else
+            begin_lookup(chosen_model)
+        end
+    end
+
     if CardDefaults.auto_send_vocabulary(CONFIGURATION) then
-        begin_lookup(CardDefaults.vocabulary_model(CONFIGURATION))
+        start_vocab_with_model(CardDefaults.vocabulary_model(CONFIGURATION))
     else
         NoteTypePicker.show(anki_cfg, function(chosen_model)
-            begin_lookup(chosen_model)
+            start_vocab_with_model(chosen_model)
         end, {
             current_model = default_model,
             title         = _("Choose note type (Vocabulary Card)"),
@@ -891,13 +893,19 @@ local function start_vocab_from_dict_popup(ui, popup)
     if not ctx.text or ctx.text == "" then
         ctx.text = (popup and (popup.lookupword or popup.word)) or ""
     end
+    local prefill = nil
+    if DictionaryLookup and DictionaryLookup.lookup_from_popup then
+        prefill = DictionaryLookup.lookup_from_popup(popup, {
+            preferred_dictionary = CardDefaults.vocabulary_dictionary(CONFIGURATION),
+        })
+    end
     -- Close the popup but keep the word selection (no_clear=true) so the card
     -- flow can promote it into a saved highlight.
     if popup and popup.onClose then
         popup:onClose(true)
     end
     UIManager:scheduleIn(0.05, function()
-        run_dictionary_vocabulary_flow(hl, ctx, ui, {})
+        run_dictionary_vocabulary_flow(hl, ctx, ui, { prefill_lookup = prefill })
     end)
 end
 
@@ -975,6 +983,7 @@ function AnkiKOAi:init()
         self.ui.dictionary:addToDictButtons({
             id          = "ankikooai_vocab",
             text        = _("Vocab Card"),
+            font_bold   = true,
             -- Transient button: reliably shown on every dictionary popup
             -- without requiring users to add it via "Customize buttons".
             conditional = true,
@@ -1129,15 +1138,35 @@ function AnkiKOAi:init()
     -- Polls every 60s. When WiFi is on and auto_send_wifi is enabled,
     -- flushes all unsent cards to AnkiConnect in the background.
     local AUTO_SEND_INTERVAL = 60
+    local AUTO_SEND_BACKOFF_MAX = 300
+    local auto_send_backoff = 0
     local function auto_send_tick()
-        UIManager:scheduleIn(AUTO_SEND_INTERVAL, auto_send_tick)
+        local wait = AUTO_SEND_INTERVAL + auto_send_backoff
+        UIManager:scheduleIn(wait, auto_send_tick)
         local cfg = get_anki_config()
         if not cfg.auto_send_wifi then return end
         if not cfg.url or cfg.url == "" then return end
         if not NetworkMgr:isOnline() then return end
-        if CardStorage.count_unsent() == 0 then return end
+        if CardStorage.count_unsent() == 0 then
+            auto_send_backoff = 0
+            return
+        end
 
-        CardManager.send_all_unsent(CONFIGURATION, nil, { background = true })
+        UiBusy.run(_("Sending saved cards to Anki…"), function()
+            CardManager.send_all_unsent(CONFIGURATION, nil, {
+                background = true,
+                on_done = function(sent, _failed)
+                    if sent > 0 then
+                        auto_send_backoff = 0
+                    elseif CardStorage.count_unsent() > 0 then
+                        auto_send_backoff = math.min(
+                            AUTO_SEND_BACKOFF_MAX,
+                            auto_send_backoff + AUTO_SEND_INTERVAL
+                        )
+                    end
+                end,
+            })
+        end)
     end
     -- First check after 30s to let KOReader settle on startup.
     UIManager:scheduleIn(30, auto_send_tick)
@@ -1195,7 +1224,7 @@ function AnkiKOAi:onDictButtonsReady(popup, buttons)
         {
             id        = "ankikooai_vocab",
             text      = _("Vocab Card"),
-            font_bold = false,
+            font_bold = true,
             callback  = function()
                 start_vocab_from_dict_popup(ui, popup)
             end,
