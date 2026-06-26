@@ -1258,8 +1258,8 @@ function SettingsViewer.show(base_config, on_saved, viewer_opts)
     show_sync = function()
         local sub_dlg
         local auto_label = cfg.auto_send_wifi
-            and CHECK_ON .. _("Send pending when WiFi connects: ON")
-            or  _("Send pending when WiFi connects: OFF")
+            and CHECK_ON .. _("Send pending when WiFi (every 20 min): ON")
+            or  _("Send pending when WiFi (every 20 min): OFF")
 
         local sync_name
         if cfg.sync_server then

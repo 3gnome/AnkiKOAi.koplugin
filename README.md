@@ -120,7 +120,7 @@ For a simpler card from your **in-app dictionary** only — no AI, no wiki:
 
 1. Install StarDict dictionaries in KOReader
 2. Create Anki note type **Vocabulary Card** with fields `Phrase`, `Definition`, `Context`, `Source`
-3. Highlight a word → **AnkiKOAi → Vocabulary Card (No AI)**
+3. **Long-press** a word → **Create Vocab Card**, or highlight → **AnkiKOAi → Vocabulary Card (No AI)**
 
 → **[docs/anki-vocabulary-card.md](docs/anki-vocabulary-card.md)** (full setup guide)
 
@@ -178,7 +178,7 @@ Create deck-options presets in Anki:
 | Memorization split/context behavior | **Settings → Memorization options…** |
 | Sync to AnkiWeb after send | **Settings → Anki connection…** (default ON) |
 | API keys | **Settings → AI Settings → API Keys** (Wiki Card only) |
-| Send pending when WiFi connects | **Settings → Sync…** |
+| Send pending when WiFi (every 20 min) | **Settings → Sync…** |
 
 Details: [docs/plugin-configuration.md](docs/plugin-configuration.md)
 

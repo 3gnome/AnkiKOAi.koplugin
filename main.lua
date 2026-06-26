@@ -982,7 +982,7 @@ function AnkiKOAi:init()
     if self.ui.dictionary and self.ui.dictionary.addToDictButtons then
         self.ui.dictionary:addToDictButtons({
             id          = "ankikooai_vocab",
-            text        = _("Vocab Card"),
+            text        = _("Create Vocab Card"),
             font_bold   = true,
             -- Transient button: reliably shown on every dictionary popup
             -- without requiring users to add it via "Customize buttons".
@@ -1135,10 +1135,10 @@ function AnkiKOAi:init()
     end
 
     -- ── Auto-Send on WiFi ────────────────────────────────────────────────────
-    -- Polls every 60s. When WiFi is on and auto_send_wifi is enabled,
-    -- flushes all unsent cards to AnkiConnect in the background.
-    local AUTO_SEND_INTERVAL = 60
-    local AUTO_SEND_BACKOFF_MAX = 300
+    -- Polls every 20 min when WiFi is on and auto_send_wifi is enabled,
+    -- flushes all unsent cards to AnkiConnect silently in the background.
+    local AUTO_SEND_INTERVAL = 20 * 60  -- seconds between checks (20 minutes)
+    local AUTO_SEND_BACKOFF_MAX = 60 * 60 -- extra delay cap when Anki stays unreachable
     local auto_send_backoff = 0
     local function auto_send_tick()
         local wait = AUTO_SEND_INTERVAL + auto_send_backoff
@@ -1151,14 +1151,21 @@ function AnkiKOAi:init()
             auto_send_backoff = 0
             return
         end
+        if CardManager.is_send_all_in_progress() then
+            return
+        end
 
-        UiBusy.run(_("Sending saved cards to Anki…"), function()
+        -- Silent background flush — never show Trapper/progress while reading.
+        -- (UiBusy here caused random "Sending saved cards to Anki…" overlays on
+        -- the Kindle when Anki was off but WiFi was on and cards were pending.)
+        UIManager:scheduleIn(0, function()
             CardManager.send_all_unsent(CONFIGURATION, nil, {
                 background = true,
-                on_done = function(sent, _failed)
+                on_done = function(sent, failed)
                     if sent > 0 then
                         auto_send_backoff = 0
-                    elseif CardStorage.count_unsent() > 0 then
+                    elseif (failed or 0) == 0 and CardStorage.count_unsent() > 0 then
+                        -- Anki unreachable (precheck failed); back off, don't hammer.
                         auto_send_backoff = math.min(
                             AUTO_SEND_BACKOFF_MAX,
                             auto_send_backoff + AUTO_SEND_INTERVAL
@@ -1168,8 +1175,8 @@ function AnkiKOAi:init()
             })
         end)
     end
-    -- First check after 30s to let KOReader settle on startup.
-    UIManager:scheduleIn(30, auto_send_tick)
+    -- First check after one interval to let KOReader settle on startup.
+    UIManager:scheduleIn(AUTO_SEND_INTERVAL, auto_send_tick)
 
     if PENDING_MIGRATION_NOTICE then
         local notice = PENDING_MIGRATION_NOTICE
@@ -1202,7 +1209,7 @@ function AnkiKOAi:init()
 
 end
 
--- Add a "Vocab Card" button to the single-word dictionary popup.
+-- Add a "Create Vocab Card" button to the single-word dictionary popup.
 -- KOReader (stable builds, e.g. v2026.03) broadcasts DictButtonsReady with the
 -- popup instance and its button table (rows of button specs) for plugins to
 -- modify in place. We append a new row; we must NOT return true, so other
@@ -1223,7 +1230,7 @@ function AnkiKOAi:onDictButtonsReady(popup, buttons)
     table.insert(buttons, {
         {
             id        = "ankikooai_vocab",
-            text      = _("Vocab Card"),
+            text      = _("Create Vocab Card"),
             font_bold = true,
             callback  = function()
                 start_vocab_from_dict_popup(ui, popup)

@@ -196,7 +196,7 @@ anki = {
 
 1. Install StarDict dictionaries in KOReader's `data/dict/` folder.
 2. Enable dictionaries in **Search → Dictionary settings**.
-3. Test a normal long-press lookup in the book before using **Vocabulary Card (No AI)**.
+3. Test a normal long-press lookup, then tap **Create Vocab Card** in the dictionary popup (or use **AnkiKOAi → Vocabulary Card (No AI)** from the highlight menu).
 
 If lookup fails, the plugin shows an error — there is no AI fallback for this flow.
 

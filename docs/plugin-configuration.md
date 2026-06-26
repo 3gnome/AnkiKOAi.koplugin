@@ -36,7 +36,7 @@ Open from **AnkiKOAi → Settings** or the plugin hub menu.
 | **Tags…** | Enable tags and edit tag list |
 | **Memorization options…** | Split/context/batch behavior (not deck or note type) |
 | **AI Settings** | Provider, language, wiki sources, prompts |
-| **Sync…** | Send pending cards when WiFi connects, cloud backup |
+| **Sync…** | Send pending cards when WiFi is on (every **20 minutes**, silent), cloud backup |
 
 ### Card defaults
 
@@ -203,10 +203,12 @@ Recent decks (last 5) are remembered automatically when you send manually from t
 |---------|----------------|
 | Saved cards (not yet sent) | `ankikooai_cards.json` |
 | Settings | `ankikooai_settings.json` |
-| Send pending when WiFi connects | Settings → Sync |
+| Send pending when WiFi (every 20 min) | Settings → Sync |
 | Cloud sync | Optional backup of saved cards to a sync server |
 
 Highlight colors after send (KOReader): **orange** = saved locally, **green** = sent to Anki.
+
+**Send pending when WiFi (every 20 min):** When ON and WiFi is up, unsent cards in **My Cards** are flushed to AnkiConnect silently in the background (no progress overlay). If Anki is unreachable, the plugin backs off up to an hour between attempts. Turn OFF while reading without Anki to avoid any network activity.
 
 ---
 

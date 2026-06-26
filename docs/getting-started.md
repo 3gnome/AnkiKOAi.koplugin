@@ -94,12 +94,14 @@ Highlights turn **orange** when saved locally and **green** after a successful s
 ## Step 5b — Your first Vocabulary Card (No AI)
 
 1. Ensure KOReader dictionaries are installed and enabled.
-2. Highlight a single word.
-3. Choose **AnkiKOAi → Vocabulary Card (No AI)**.
-4. If multiple dictionaries match and no preferred dictionary is set, pick an entry once.
-5. Review (or auto-send) and confirm in Anki.
+2. **Long-press** a word → dictionary popup → **Create Vocab Card**  
+   *or* highlight text → **AnkiKOAi → Vocabulary Card (No AI)**.
+3. If multiple dictionaries match and no preferred dictionary is set, pick an entry once.
+4. Review (or auto-send) and confirm in Anki.
 
-No API key or Wi‑Fi is required for the dictionary lookup itself; sending to Anki still needs AnkiConnect on your PC.
+No API key is required for the dictionary lookup itself; sending to Anki still needs AnkiConnect on your PC.
+
+**Tip:** Turn off **Settings → Sync → Send pending when WiFi (every 20 min)** while reading without Anki open — cards stay in **My Cards** until you send manually.
 
 ## Step 6 — Your first memorization deck (optional)
 

@@ -34,6 +34,10 @@ local CardManager = {}
 
 local send_all_in_progress = false
 
+function CardManager.is_send_all_in_progress()
+    return send_all_in_progress
+end
+
 local function notify(text)
     UIManager:show(Notification:new { text = text })
 end
@@ -101,7 +105,8 @@ end
 function CardManager.send_all_unsent(base_config, ui, opts)
     opts = opts or {}
     if send_all_in_progress then
-        if opts.on_done then opts.on_done(0, 0) end
+        -- Overlapping batch (e.g. background tick while send still running).
+        -- Do not call on_done — avoids false backoff in auto_send_tick.
         return
     end
     local anki_config = effective_config(base_config)
@@ -129,6 +134,16 @@ function CardManager.send_all_unsent(base_config, ui, opts)
         if not opts.background then notify(_("No pending cards to send.")) end
         if opts.on_done then opts.on_done(0, 0) end
         return
+    end
+
+    -- Background auto-send: one quick reachability check instead of timing out
+    -- per card (which freezes e-ink readers when Anki is off).
+    if opts.background then
+        local reachable = AnkiSync.test_connection(anki_config.url)
+        if not reachable then
+            if opts.on_done then opts.on_done(0, 0) end
+            return
+        end
     end
 
     send_all_in_progress = true

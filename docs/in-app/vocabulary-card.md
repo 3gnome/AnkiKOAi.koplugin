@@ -6,6 +6,11 @@ Anki note type name: **Vocabulary Card**
 
 Install at least one dictionary in KOReader before using this flow.
 
+## How to create a card
+
+- **Long-press** a word → dictionary popup → **Create Vocab Card** (same Card defaults as the highlight menu).
+- **Highlight** text → **AnkiKOAi → Vocabulary Card (No AI)**.
+
 ## Fields (exact names)
 
 | Order | Field |
