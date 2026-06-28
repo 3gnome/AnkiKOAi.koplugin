@@ -51,6 +51,18 @@ function SelectableMenu.sync_in_place(menu, state)
             local label = opts.delete_selected_label or _("Delete Selected")
             item.text = label .. " (" .. tostring(sel_cnt) .. ")"
             item.select_enabled = sel_cnt > 0
+        elseif item._anki_send_selected then
+            local label = opts.send_selected_label or _("Send Selected to Anki")
+            item.text = label .. " (" .. tostring(sel_cnt) .. ")"
+            item.select_enabled = sel_cnt > 0
+        elseif item._anki_check_anki_selected then
+            local label = opts.check_anki_selected_label or _("Check Selected against Anki")
+            item.text = label .. " (" .. tostring(sel_cnt) .. ")"
+            item.select_enabled = sel_cnt > 0
+        elseif item._anki_remove_from_queue then
+            local label = opts.remove_from_queue_label or _("Remove from queue")
+            item.text = label .. " (" .. tostring(sel_cnt) .. ")"
+            item.select_enabled = sel_cnt > 0
         elseif item._anki_action_count and opts.action_count_fn then
             local n = opts.action_count_fn()
             if opts.action_count_label_fn then
@@ -80,7 +92,9 @@ end
   opts.open_on_tap — tap opens instead of toggling
   opts.default_selected — bool, or opts.default_selected_fn(entry, i)
   opts.on_delete_selected(selected_entries)
-  opts.on_delete_all(all_entries)
+  opts.on_send_selected(selected_entries)
+  opts.on_check_anki_selected(selected_entries)
+  opts.on_remove_from_queue_selected(selected_entries)
   Delete labels/confirms optional; delete rows only when callbacks set.
 ]]
 function SelectableMenu.append_list(items, opts)
@@ -160,6 +174,87 @@ function SelectableMenu.append_list(items, opts)
                 elseif opts.on_open then
                     opts.on_open(entry, i)
                 end
+            end,
+        })
+    end
+
+    if opts.on_send_selected then
+        table.insert(items, {
+            text               = (opts.send_selected_label or _("Send Selected to Anki"))
+                .. " (" .. tostring(sel_cnt) .. ")",
+            select_enabled     = sel_cnt > 0,
+            _anki_send_selected = true,
+            callback = function()
+                local current_cnt = SelectableMenu.count_selected(selected)
+                if current_cnt == 0 then return end
+                local picked = {}
+                for _i, entry in ipairs(entries) do
+                    if selected[entry.key] then
+                        table.insert(picked, entry)
+                    end
+                end
+                opts.on_send_selected(picked, selected)
+            end,
+        })
+    end
+
+    if opts.on_check_anki_selected then
+        table.insert(items, {
+            text                  = (opts.check_anki_selected_label or _("Check Selected against Anki"))
+                .. " (" .. tostring(sel_cnt) .. ")",
+            select_enabled        = sel_cnt > 0,
+            _anki_check_anki_selected = true,
+            callback = function()
+                local current_cnt = SelectableMenu.count_selected(selected)
+                if current_cnt == 0 then return end
+                local picked = {}
+                for _i, entry in ipairs(entries) do
+                    if selected[entry.key] then
+                        table.insert(picked, entry)
+                    end
+                end
+                UIManager:show(ConfirmBox:new {
+                    text = opts.check_anki_selected_confirm
+                        or _("Check selected pending cards against Anki? Matches by Phrase in the target deck only. Does not create notes. Found cards are removed from the queue and logged to Recently sent."),
+                    ok_text = _("Check Anki"),
+                    ok_callback = function()
+                        opts.on_check_anki_selected(picked, selected)
+                    end,
+                })
+            end,
+        })
+    end
+
+    if opts.on_remove_from_queue_selected then
+        table.insert(items, {
+            text                  = (opts.remove_from_queue_label or _("Remove from queue"))
+                .. " (" .. tostring(sel_cnt) .. ")",
+            select_enabled        = sel_cnt > 0,
+            _anki_remove_from_queue = true,
+            callback = function()
+                local current_cnt = SelectableMenu.count_selected(selected)
+                if current_cnt == 0 then return end
+                local picked = {}
+                for _i, entry in ipairs(entries) do
+                    if selected[entry.key] then
+                        table.insert(picked, entry)
+                    end
+                end
+                UIManager:show(ConfirmBox:new {
+                    text = opts.remove_from_queue_confirm
+                        or _("Remove selected cards from the pending queue? This does not change Anki."),
+                    ok_text = _("Remove"),
+                    ok_callback = function()
+                        opts.on_remove_from_queue_selected(picked, selected)
+                        UIManager:scheduleIn(0.05, function()
+                            if opts.after_remove_from_queue then
+                                pcall(opts.after_remove_from_queue)
+                            else
+                                pcall(rebuild)
+                            end
+                        end)
+                    end,
+                })
             end,
         })
     end

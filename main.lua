@@ -76,6 +76,10 @@ do
         end
     end
     CONFIGURATION = CONFIGURATION or {}
+    local ok_migrate, migrate_err = pcall(CardStorage.ensure_queue_migrated)
+    if not ok_migrate then
+        logger.warn(PluginConstants.ID, "queue migration skipped:", migrate_err)
+    end
     if CONFIGURATION.anki then
         if CONFIGURATION.anki.text_provider == "ankivocab" then
             CONFIGURATION.anki.text_provider = "dashscope"
@@ -887,12 +891,59 @@ end
 -- popup (DictQuickLookup). The long-pressed word is still held as the live
 -- highlight selection (that's how the popup's own "Highlight" button works),
 -- so we snapshot it before the popup tears itself down.
-local function start_vocab_from_dict_popup(ui, popup)
-    local hl = (popup and popup.highlight) or ui.highlight
+local function hub_menu_actions(hl, ctx, ui)
+    return {
+        on_wiki_card = function(reopen_hub_fn)
+            run_wiki_card_flow(hl, ctx, ui, {
+                parent_fn = reopen_hub_fn,
+            })
+        end,
+        on_vocabulary_card = function(reopen_hub_fn)
+            run_dictionary_vocabulary_flow(hl, ctx, ui, {
+                parent_fn = reopen_hub_fn,
+            })
+        end,
+        on_memorization = function(reopen_hub_fn)
+            release_highlight_for_reading(hl)
+            run_memorization_flow(hl, ctx, ui, {
+                parent_fn = reopen_hub_fn,
+            })
+        end,
+        reopen_highlight_menu = function()
+            reopen_highlight_menu(hl, ctx.index, ctx.selected_text)
+        end,
+        on_dismiss = function()
+            release_highlight_for_reading(hl)
+        end,
+    }
+end
+
+local function open_hub_from_context(hl, ctx, ui)
+    UIManager:scheduleIn(0.05, function()
+        PluginMenu.show(hl, ctx, ui, CONFIGURATION, hub_menu_actions(hl, ctx, ui))
+    end)
+end
+
+local function dict_popup_context(hl, popup)
     local ctx = capture_highlight_context(hl, nil)
     if not ctx.text or ctx.text == "" then
         ctx.text = (popup and (popup.lookupword or popup.word)) or ""
     end
+    return ctx
+end
+
+local function start_hub_from_dict_popup(ui, popup)
+    local hl = (popup and popup.highlight) or ui.highlight
+    local ctx = dict_popup_context(hl, popup)
+    if popup and popup.onClose then
+        popup:onClose(true)
+    end
+    open_hub_from_context(hl, ctx, ui)
+end
+
+local function start_vocab_from_dict_popup(ui, popup)
+    local hl = (popup and popup.highlight) or ui.highlight
+    local ctx = dict_popup_context(hl, popup)
     local prefill = nil
     if DictionaryLookup and DictionaryLookup.lookup_from_popup then
         prefill = DictionaryLookup.lookup_from_popup(popup, {
@@ -909,6 +960,12 @@ local function start_vocab_from_dict_popup(ui, popup)
     end)
 end
 
+local function dict_popup_show(dict_popup)
+    return not dict_popup.is_wiki
+        and not dict_popup:isDocless()
+        and dict_popup.highlight ~= nil
+end
+
 function AnkiKOAi:init()
     if not self.ui or not self.ui.highlight then
         logger.warn(PluginConstants.ID, "highlight module not available — plugin not loaded")
@@ -917,48 +974,24 @@ function AnkiKOAi:init()
 
     -- ── AnkiKOAi hub (single highlight-menu entry) ──────────────────────────
     local ok, err = pcall(function()
-    self.ui.highlight:addToHighlightDialog(PluginConstants.ID .. "_menu", function(hl, index)
+    self.ui.highlight:addToHighlightDialog(PluginConstants.HIGHLIGHT_DIALOG_ID_HUB, function(hl, index)
         return {
-            text    = PluginConstants.NAME,
-            enabled = true,
+            text      = PluginConstants.NAME,
+            font_bold = true,
+            enabled   = true,
             callback = function()
                 local ctx = capture_highlight_context(hl, index)
-                -- Close KOReader's highlight dialog only; do not clear selection yet.
                 dismiss_highlight_dialog(hl)
-                UIManager:scheduleIn(0.05, function()
-                    PluginMenu.show(hl, ctx, self.ui, CONFIGURATION, {
-                        on_wiki_card = function(reopen_hub_fn)
-                            run_wiki_card_flow(hl, ctx, self.ui, {
-                                parent_fn = reopen_hub_fn,
-                            })
-                        end,
-                        on_vocabulary_card = function(reopen_hub_fn)
-                            run_dictionary_vocabulary_flow(hl, ctx, self.ui, {
-                                parent_fn = reopen_hub_fn,
-                            })
-                        end,
-                        on_memorization = function(reopen_hub_fn)
-                            release_highlight_for_reading(hl)
-                            run_memorization_flow(hl, ctx, self.ui, {
-                                parent_fn = reopen_hub_fn,
-                            })
-                        end,
-                        reopen_highlight_menu = function()
-                            reopen_highlight_menu(hl, ctx.index, ctx.selected_text)
-                        end,
-                        on_dismiss = function()
-                            release_highlight_for_reading(hl)
-                        end,
-                    })
-                end)
+                open_hub_from_context(hl, ctx, self.ui)
             end,
         }
     end)
 
-    self.ui.highlight:addToHighlightDialog(PluginConstants.ID .. "_memorize", function(hl, index)
+    self.ui.highlight:addToHighlightDialog(PluginConstants.HIGHLIGHT_DIALOG_ID_MEM, function(hl, index)
         return {
-            text    = _("Memorize"),
-            enabled = true,
+            text      = _("Memorize"),
+            font_bold = true,
+            enabled   = true,
             show_in_highlight_dialog_func = function()
                 return CardDefaults.quick_highlight_button(CONFIGURATION)
             end,
@@ -981,17 +1014,21 @@ function AnkiKOAi:init()
     -- below. We support both; they are mutually exclusive across versions.
     if self.ui.dictionary and self.ui.dictionary.addToDictButtons then
         self.ui.dictionary:addToDictButtons({
+            id          = "ankikooai_hub",
+            text        = PluginConstants.NAME,
+            font_bold   = true,
+            conditional = true,
+            show_func   = dict_popup_show,
+            callback    = function(dict_popup)
+                start_hub_from_dict_popup(self.ui, dict_popup)
+            end,
+        })
+        self.ui.dictionary:addToDictButtons({
             id          = "ankikooai_vocab",
             text        = _("Create Vocab Card"),
             font_bold   = true,
-            -- Transient button: reliably shown on every dictionary popup
-            -- without requiring users to add it via "Customize buttons".
             conditional = true,
-            show_func   = function(dict_popup)
-                return not dict_popup.is_wiki
-                    and not dict_popup:isDocless()
-                    and dict_popup.highlight ~= nil
-            end,
+            show_func   = dict_popup_show,
             callback    = function(dict_popup)
                 start_vocab_from_dict_popup(self.ui, dict_popup)
             end,
@@ -1064,6 +1101,12 @@ function AnkiKOAi:init()
                             return v
                         end
                         viewer_ref[1] = make_viewer(false)
+                        return true
+                    elseif ann.color == PluginConstants.HIGHLIGHT_COLOR_SENT then
+                        UIManager:show(InfoMessage:new {
+                            text    = _("Sent to Anki — see Recently sent"),
+                            timeout = 3,
+                        })
                         return true
                     end
 
@@ -1161,8 +1204,8 @@ function AnkiKOAi:init()
         UIManager:scheduleIn(0, function()
             CardManager.send_all_unsent(CONFIGURATION, nil, {
                 background = true,
-                on_done = function(sent, failed)
-                    if sent > 0 then
+                on_done = function(sent, failed, reconciled)
+                    if (sent or 0) + (reconciled or 0) > 0 then
                         auto_send_backoff = 0
                     elseif (failed or 0) == 0 and CardStorage.count_unsent() > 0 then
                         -- Anki unreachable (precheck failed); back off, don't hammer.
@@ -1200,7 +1243,8 @@ function AnkiKOAi:init()
 
     end)
     if not ok then
-        logger.warn(PluginConstants.ID, "init failed:", err)
+        local trace = debug.traceback(tostring(err), 2)
+        logger.warn(PluginConstants.ID, "init failed:", trace)
         UIManager:show(InfoMessage:new {
             text    = _("AnkiKOAi failed to load: ") .. tostring(err),
             timeout = 8,
@@ -1218,16 +1262,26 @@ function AnkiKOAi:onDictButtonsReady(popup, buttons)
     if not popup or popup.is_wiki or popup.is_wiki_fullpage then return end
     if popup.highlight == nil then return end
     if type(buttons) ~= "table" then return end
-    -- Guard against double insertion (e.g. if a build fires both mechanisms).
+    local has_hub, has_vocab = false, false
     for _i, row in ipairs(buttons) do
         if type(row) == "table" then
             for _j, btn in ipairs(row) do
-                if btn.id == "ankikooai_vocab" then return end
+                if btn.id == "ankikooai_hub" then has_hub = true end
+                if btn.id == "ankikooai_vocab" then has_vocab = true end
             end
         end
     end
+    if has_hub and has_vocab then return end
     local ui = self.ui
     table.insert(buttons, {
+        {
+            id        = "ankikooai_hub",
+            text      = PluginConstants.NAME,
+            font_bold = true,
+            callback  = function()
+                start_hub_from_dict_popup(ui, popup)
+            end,
+        },
         {
             id        = "ankikooai_vocab",
             text      = _("Create Vocab Card"),

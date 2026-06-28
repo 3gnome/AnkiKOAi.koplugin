@@ -4,6 +4,7 @@ configuration.lua
 # Plugin runtime data (stored on device under KOReader settings)
 *_cards.json
 *_settings.json
+ankikooai_recent_sent.json
 
 # Dev / emulator logs
 koreader.log

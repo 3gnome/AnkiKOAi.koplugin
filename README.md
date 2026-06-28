@@ -43,6 +43,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 - **Vocabulary Card (No AI)** — KOReader dictionary lookup only — definition + passage, no AI
 - **Memorization Card (No AI, Multi-Line)** — overlapping step cards + full-recitation card for poetry and prose ([AnkiLPCG](https://ankilpcg.readthedocs.io/)-style)
 - **AnkiConnect** — send to desktop Anki; optional auto-sync to AnkiWeb after send
+- **My Cards** — pending outbox only; **Recently sent** log for confirmed sends; manual batch send shows **Sending… N/M** progress; batch send reconciles duplicates/timeouts and removes cards from the queue
 - **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync; gray rows = tap for help (no file editing on device)
 - **One-tap send** — per card type: skip note-type/deck prompts and send straight to your default deck
 - **Multiple AI providers** — DashScope, Gemini, OpenAI, OpenRouter
@@ -52,7 +53,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 1. Install the plugin into `koreader/plugins/AnkiKOAi.koplugin/`
 2. Set up three Anki note types: **Wiki Card**, **Vocabulary Card**, and **Memorization**
 3. Configure AnkiConnect on your PC and enter your LAN URL in plugin Settings
-4. Long-press a word or highlight text → **AnkiKOAi** → choose a card type
+4. Long-press a word or highlight text → **AnkiKOAi** (bottom of the highlight menu) → choose a card type. Or long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card**.
 
 **Full walkthrough:** [docs/getting-started.md](docs/getting-started.md)
 

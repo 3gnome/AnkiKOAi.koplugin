@@ -222,14 +222,19 @@ On device, open **Settings → View settings guide** or see **docs/in-app/settin
 
 | Feature | File / setting |
 |---------|----------------|
-| Saved cards (not yet sent) | `ankikooai_cards.json` |
+| Pending card queue (outbox) | `ankikooai_cards.json` |
+| Recently sent log (on-device confirmation) | `ankikooai_recent_sent.json` (not cloud-synced in v1) |
 | Settings | `ankikooai_settings.json` |
 | Send pending when WiFi (every 20 min) | Settings → Sync |
-| Cloud sync | Optional backup of saved cards to a sync server |
+| Cloud sync | Optional backup of pending cards to a sync server |
 
-Highlight colors after send (KOReader): **orange** = saved locally, **green** = sent to Anki.
+Highlight colors (KOReader): **orange** = pending in My Cards queue; **green** = wiki card confirmed in Anki (highlight kept). Vocabulary and memorization highlights are **removed** from the book after a successful send when the book is open. Background auto-send (no book open) still deletes queue rows and logs **Recently sent**, but cannot remove highlights without an open book.
 
-**Send pending when WiFi (every 20 min):** When ON and WiFi is up, unsent cards in **My Cards** are flushed to AnkiConnect silently in the background (no progress overlay). If Anki is unreachable, the plugin backs off up to an hour between attempts. Turn OFF while reading without Anki to avoid any network activity.
+**Send pending when WiFi (every 20 min):** When ON and WiFi is up, pending cards in **My Cards** are flushed to AnkiConnect silently in the background (no progress overlay). If Anki is unreachable, the plugin backs off up to an hour between attempts. Turn OFF while reading without Anki to avoid any network activity.
+
+**My Cards batch send:** **Send pending** and **Send Selected to Anki** show a **Sending… N/M** toast while each card is sent (manual sends only). **Send pending when WiFi** background flush stays silent. Both batch actions reconcile with Anki when a note already exists (duplicate rejection) or when a send timed out but the note is found in the target deck. Confirmed cards are **deleted from the queue** and appended to **Recently sent**. **Check Selected against Anki** (or **Check pending against Anki** per book) runs the same Phrase + deck lookup without sending.
+
+Legacy `sent_to_anki` rows in an old `ankikooai_cards.json` are purged on first load after update. An old cloud snapshot may briefly restore them until the next upload.
 
 ---
 

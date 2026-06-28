@@ -19,7 +19,7 @@ koreader/plugins/AnkiKOAi.koplugin/
 
 The folder name **must** end in `.koplugin`.
 
-Restart KOReader. You should see **AnkiKOAi** in the highlight menu after selecting text.
+Restart KOReader. After you select text (long-press or drag), **AnkiKOAi** appears at the bottom of the highlight menu (scroll if you have many plugins). You can also long-press a word → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** (same row).
 
 ## Step 2 — Set up Anki (one-time)
 
@@ -121,12 +121,19 @@ See [Anki: Memorization deck](anki-memorization.md) for study routine and filter
 | Wiki Card generation fails | Check API key and Wi‑Fi |
 | Dictionary lookup fails | Install/enable StarDict dictionaries in KOReader |
 | Card sent to wrong deck | Check the card type’s default deck under **Card defaults**; one-tap send uses that deck, not your last manual pick |
-| No **AnkiKOAi** in menu | Restart KOReader; confirm `.koplugin` folder name |
+| No **AnkiKOAi** in menu | Restart KOReader; confirm `.koplugin` folder name; plugin enabled under Tools → Plugin management. **AnkiKOAi** is at the bottom of the highlight menu (scroll down). Alternative: long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** |
 
 ## Next steps
 
 - Batch highlights: **AnkiKOAi → Highlights and Cards** (Wiki, Vocabulary, or Memorization batch)
-- Edit saved cards: **My Cards**
+- Edit pending cards: **My Cards**
+  - **My Cards** holds only cards waiting to send (outbox). Confirmed sends are removed from the queue and logged under **Recently sent**.
+  - **Send pending to Anki** at the top, or open a book → **Send Selected to Anki** — while sending, a toast shows **Sending… N/M** (menus may close first, e.g. from the hub); a summary appears when done
+  - **Check pending against Anki** (book header) or **Check Selected against Anki** — read-only lookup by **Phrase** in the target deck; found cards are removed from the queue and logged to **Recently sent** (no new Anki notes)
+  - **Remove from queue** — delete pending rows without touching Anki; vocabulary/memorization highlights are removed when the book is open
+  - **Long-press** a row → **Send to Anki** (one card); tap a row → card viewer → Send
+  - Batch send treats Anki duplicate errors and post-timeout matches as **already in Anki**, removes them from My Cards, and logs to **Recently sent**
+  - **Highlight colors:** orange = pending in queue; green (wiki only) = sent to Anki — tap green wiki highlights for a brief “see Recently sent” message, not the card viewer
 - Tune memorization split/context: **AnkiKOAi → Settings → Memorization options…**
 - Tune per-type decks, note types, and one-tap send: **AnkiKOAi → Settings → Card defaults…**
 - Deck routing (subdeck by book): **Card defaults → Where cards go…**

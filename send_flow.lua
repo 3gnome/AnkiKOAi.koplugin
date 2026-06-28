@@ -9,10 +9,10 @@ local AnkiSync         = require("anki_sync")
 local CardDefaults     = require("card_defaults")
 local CardStorage      = require("card_storage")
 local DeckPicker       = require("deck_picker")
-local HighlightStatus  = require("highlight_status")
 local CardFields       = require("card_fields")
 local NoteTypeProfiles = require("note_type_profiles")
 local UiBusy           = require("ui_busy")
+local CardReconcile    = require("card_reconcile")
 
 local SendFlow = {}
 
@@ -78,14 +78,14 @@ local function finish_send(config, card, deck, model, ui, done, opts)
         if card then
             card.target_deck  = deck
             card.target_model = model
-            card.sent_to_anki = true
-            CardStorage.save_or_update(card)
+            CardReconcile.finish({ card = card }, config, ui, {
+                status = "sent",
+                deck   = deck,
+                model  = model,
+            })
         end
         touch_recent_deck(config, deck)
         SendFlow.remember_send(config, deck, model)
-        if ui and card and card.highlight_pos0 then
-            HighlightStatus.mark_sent(ui, card.highlight_pos0, card.highlight_pos1)
-        end
         if err_or_suffix and err_or_suffix ~= "" then
             UIManager:show(Notification:new {
                 text    = err_or_suffix:gsub("^%s+", ""),
@@ -118,11 +118,11 @@ function SendFlow.execute_send(config, card, deck, model, ui, done, opts)
         return
     end
 
-    local dup = CardStorage.find_sent_duplicate(
-        card and card.phrase, card and card.book_title)
+    local dup = CardStorage.find_pending_duplicate(
+        card and card.phrase, card and card.book_title, card)
     if dup then
         UIManager:show(ConfirmBox:new {
-            text = _("This phrase was already sent to Anki from this book. Send again?"),
+            text = _("This phrase is already in your pending queue for this book. Send anyway?"),
             ok_text = _("Send anyway"),
             ok_callback = proceed,
             cancel_callback = function()

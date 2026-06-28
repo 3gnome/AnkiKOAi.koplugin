@@ -10,8 +10,12 @@ local function data_path(name)
     return DataStorage:getDataDir() .. "/" .. name
 end
 
-local CARDS_FILE    = data_path(PluginConstants.CARDS_FILE)
-local SETTINGS_FILE = data_path(PluginConstants.SETTINGS_FILE)
+local CARDS_FILE       = data_path(PluginConstants.CARDS_FILE)
+local SETTINGS_FILE    = data_path(PluginConstants.SETTINGS_FILE)
+local RECENT_SENT_FILE = data_path(PluginConstants.RECENT_SENT_FILE)
+
+local RECENT_SENT_MAX = 50
+local purge_done = false
 
 local CardStorage = {}
 
@@ -54,6 +58,89 @@ local function stem(word)
     w = w:gsub("er$", "")         -- "bigger" → "bigg" (approximate)
     w = w:gsub("est$", "")        -- "biggest" → "bigg"
     return w
+end
+
+local function save_recent_raw(entries)
+    local ok, encoded = pcall(json.encode, entries)
+    if not ok then return false end
+    local tmp = RECENT_SENT_FILE .. ".tmp"
+    local f = io.open(tmp, "w")
+    if not f then return false end
+    local wrote = f:write(encoded)
+    local closed = f:close()
+    if not wrote or not closed then
+        os.remove(tmp)
+        return false
+    end
+    if os.rename(tmp, RECENT_SENT_FILE) then return true end
+    os.remove(RECENT_SENT_FILE)
+    if os.rename(tmp, RECENT_SENT_FILE) then return true end
+    os.remove(tmp)
+    return false
+end
+
+local function load_recent_raw()
+    local f = io.open(RECENT_SENT_FILE, "r")
+    if not f then return {} end
+    local content = f:read("*all")
+    f:close()
+    if not content or content == "" then return {} end
+    local ok, data = pcall(json.decode, content)
+    if ok and type(data) == "table" then return data end
+    return {}
+end
+
+function CardStorage.record_recent_sent(entry)
+    entry = entry or {}
+    local entries = load_recent_raw()
+    table.insert(entries, 1, {
+        phrase     = entry.phrase or "",
+        book_title = entry.book_title or "",
+        card_kind  = entry.card_kind or "",
+        deck       = entry.deck or "",
+        model      = entry.model or "",
+        status     = entry.status or "sent",
+        sent_at    = entry.sent_at or os.time(),
+    })
+    while #entries > RECENT_SENT_MAX do
+        table.remove(entries)
+    end
+    save_recent_raw(entries)
+end
+
+function CardStorage.load_recent_sent()
+    return load_recent_raw()
+end
+
+function CardStorage.clear_recent_sent()
+    save_recent_raw({})
+end
+
+function CardStorage.purge_sent_cards()
+    local ok_load, entries = pcall(load_raw)
+    if not ok_load or type(entries) ~= "table" then
+        logger.warn(PluginConstants.ID, "purge_sent_cards: load failed:", entries)
+        purge_done = true
+        return
+    end
+    local kept = {}
+    for _i, e in ipairs(entries) do
+        if type(e) == "table" and not e.sent_to_anki then
+            table.insert(kept, e)
+        end
+    end
+    if #kept ~= #entries then
+        if not save_raw(kept) then
+            logger.warn(PluginConstants.ID, "purge_sent_cards: save failed")
+        end
+    end
+    purge_done = true
+end
+
+function CardStorage.ensure_queue_migrated()
+    if not purge_done then
+        CardStorage.purge_sent_cards()
+    end
 end
 
 local function load_raw()
@@ -117,7 +204,6 @@ function CardStorage.save_or_update(card)
     for i, e in ipairs(entries) do
         if same_card(e, card) then
             local merged = CardStorage.serialize_entry(card)
-            merged.sent_to_anki = e.sent_to_anki
             merged.date = e.date or merged.date
             entries[i] = merged
             if not save_raw(entries) then return false, "write_failed" end
@@ -153,18 +239,21 @@ function CardStorage.serialize_entry(card)
         anki_fields    = card.anki_fields,
         date           = os.date("%Y-%m-%d"),
         updated_at     = os.time(),
-        sent_to_anki   = card.sent_to_anki == true,
     }
 end
 
--- Already sent to Anki for this phrase in the same book?
-function CardStorage.find_sent_duplicate(phrase, book_title)
+-- Pending queue duplicate for this phrase in the same book?
+-- exclude_card: skip the row being sent (same identity) so Send anyway? only
+-- appears when another pending entry exists.
+function CardStorage.find_pending_duplicate(phrase, book_title, exclude_card)
     local key  = normalize(phrase)
     local book = normalize(book_title or "")
     for _, e in ipairs(load_raw()) do
-        if e.sent_to_anki and normalize(e.phrase) == key then
+        if not e.sent_to_anki and normalize(e.phrase) == key then
             if book == "" or normalize(e.book_title or "") == book then
-                return e
+                if not exclude_card or not same_card(e, exclude_card) then
+                    return e
+                end
             end
         end
     end
@@ -181,12 +270,16 @@ function CardStorage.is_memorization(card)
         and card.memorization_text and card.memorization_text ~= ""
 end
 
-function CardStorage.count_unsent()
+function CardStorage.count_pending()
     local n = 0
     for _, e in ipairs(load_raw()) do
         if not e.sent_to_anki then n = n + 1 end
     end
     return n
+end
+
+function CardStorage.count_unsent()
+    return CardStorage.count_pending()
 end
 
 -- Queue a memorization passage for sending when Anki is reachable.
@@ -207,13 +300,12 @@ function CardStorage.save_memorization_pending(text, meta, deck)
         book_author         = meta.book_author or "",
         source              = meta.source or "",
         target_deck         = deck or "",
-        sent_to_anki        = false,
     })
     return ok, reason
 end
 
 -- Update editable fields of an already-saved card (matched by original phrase).
--- Does not touch book metadata, date or sent_to_anki.
+-- Does not touch book metadata or date.
 function CardStorage.update_card(original_phrase, new_card)
     local key     = normalize(original_phrase)
     local entries = load_raw()
@@ -240,6 +332,24 @@ function CardStorage.delete_card(idx)
     local entries = load_raw()
     table.remove(entries, idx)
     save_raw(entries)
+end
+
+function CardStorage.delete_at_index(idx)
+    CardStorage.delete_card(idx)
+end
+
+-- Remove one pending card matching identity (phrase/mem text + book).
+function CardStorage.delete_matching_card(card)
+    if not card then return false end
+    local entries = load_raw()
+    for i, e in ipairs(entries) do
+        if same_card(e, card) then
+            table.remove(entries, i)
+            save_raw(entries)
+            return true
+        end
+    end
+    return false
 end
 
 -- Delete multiple cards by 1-based indices (highest first).
@@ -291,7 +401,7 @@ function CardStorage.find_by_phrase(phrase)
     local key     = normalize(phrase)
     local entries = load_raw()
     for _, e in ipairs(entries) do
-        if normalize(e.phrase) == key then
+        if not e.sent_to_anki and normalize(e.phrase) == key then
             return e
         end
     end
@@ -308,21 +418,21 @@ function CardStorage.find_by_phrase_fuzzy(phrase)
     if key == "" then return nil end
     local entries = load_raw()
     for _, e in ipairs(entries) do
-        if stem(e.phrase) == key then
+        if not e.sent_to_anki and stem(e.phrase) == key then
             return e
         end
     end
     return nil
 end
 
--- Find a saved card by highlight position.
+-- Find a saved pending card by highlight position.
 -- Returns the card table or nil.
 function CardStorage.find_by_position(pos0, pos1)
     if not pos0 then return nil end
     local entries = load_raw()
     local fallback
     for _, e in ipairs(entries) do
-        if e.highlight_pos0 == pos0 then
+        if not e.sent_to_anki and e.highlight_pos0 == pos0 then
             if pos1 and e.highlight_pos1 and e.highlight_pos1 == pos1 then
                 return e
             end
@@ -337,51 +447,11 @@ function CardStorage.is_saved(phrase)
     local key     = normalize(phrase)
     local entries = load_raw()
     for _, e in ipairs(entries) do
-        if normalize(e.phrase) == key then
+        if not e.sent_to_anki and normalize(e.phrase) == key then
             return true
         end
     end
     return false
-end
-
--- Mark a phrase as sent to Anki; optionally record deck and note type used.
-function CardStorage.mark_sent(phrase, target_deck, target_model)
-    local key     = normalize(phrase)
-    local entries = load_raw()
-    for _, e in ipairs(entries) do
-        if normalize(e.phrase) == key then
-            e.sent_to_anki = true
-            if target_deck and target_deck ~= "" then
-                e.target_deck = target_deck
-            end
-            if target_model and target_model ~= "" then
-                e.target_model = target_model
-            end
-            break
-        end
-    end
-    save_raw(entries)
-end
-
--- Mark a memorization passage as sent. Memorization cards must be matched on
--- their full text (the phrase is a title-derived label that many passages from
--- the same book/page can share), otherwise the wrong pending card gets flagged.
-function CardStorage.mark_sent_memorization(memorization_text, target_deck)
-    local key     = normalize(memorization_text)
-    if key == "" then return end
-    local entries = load_raw()
-    for _, e in ipairs(entries) do
-        if e.card_kind == "memorization"
-           and normalize(e.memorization_text) == key then
-            e.sent_to_anki = true
-            if target_deck and target_deck ~= "" then
-                e.target_deck       = target_deck
-                e.memorization_deck = target_deck
-            end
-            break
-        end
-    end
-    save_raw(entries)
 end
 
 -- Persist Anki connection settings (override configuration.lua at runtime).

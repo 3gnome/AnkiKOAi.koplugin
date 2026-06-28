@@ -34,7 +34,7 @@ cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo 
 | `dictionary_lookup.lua` | Vocabulary Card dictionary path |
 | `poetry_memorize.lua` | Memorization split + send |
 | `highlight_inbox.lua` | Batch highlight flows |
-| `card_manager.lua` | My Cards, manage, send-all-unsent |
+| `card_manager.lua` | My Cards, manage, send-all-unsent, `send_batch_items` |
 
 ---
 
@@ -53,6 +53,12 @@ cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo 
 **Hub labels:** `CardDefaults.wiki_hub_label(config)` / `vocabulary_hub_label(config)` — empty `wiki_card_hub_label` / `vocabulary_card_hub_label` → `PluginConstants` defaults. Used in `plugin_menu.lua`, `highlight_inbox.lua`.
 
 **Prompts & suffix** (`settings_viewer.lua` → `show_prompts`): Menu (not ButtonDialog); always edits `wiki_note_type`; `prompt_edit_model` synced on save. **View default** = `PromptBuilder.preview_*_builtin` (built-in template only); **Preview effective** = `preview_generate` / `preview_regen`.
+
+**Batch send** (`card_manager.lua`): `send_all_unsent` / `send_batch_items` → `AnkiSync.send_card_with_status` (duplicate → reconcile; network timeout → `note_exists_in_deck` verify). Manual batch shows **Sending… N/M** via `Notification` (`show_batch_progress`); gated with `not opts.background` (WiFi auto-send in `main.lua` stays silent). Reconcile via `CardReconcile.finish` → `record_recent_sent` + `delete_matching_card` + per-type highlight policy.
+
+**Check against Anki** (`CardManager.check_items_against_anki`): read-only `findNotes` via `resolve_deck_name` + Phrase; found → `CardReconcile.finish` status `checked`. My Cards: Check pending / Check Selected.
+
+**Recently sent:** `ankikooai_recent_sent.json`, max 50 entries; not synced in v1 (`card_sync.lua` unchanged).
 
 Use `CardDefaults.*` in code; do not read raw `config.deck` except as legacy fallback inside `card_defaults.lua`.
 
@@ -117,6 +123,9 @@ Plugin uses KOReader `logger` (`require("logger")`) → stdout. `main.lua` wraps
 
 **Highlight dialog rule:** `addToHighlightDialog` callbacks must **never return `nil`**.
 Use `show_in_highlight_dialog_func = function() return false end` to hide a button.
+Hub button id: `99_ankikooai` (`PluginConstants.HIGHLIGHT_DIALOG_ID_HUB`) — KOReader sorts
+buttons by id string; `99_` prefix keeps AnkiKOAi at the bottom of the highlight menu
+(scroll if many plugins).
 
 ---
 

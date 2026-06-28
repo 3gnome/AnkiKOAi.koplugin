@@ -169,13 +169,11 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
             text     = _("Send pending to Anki") .. " (" .. tostring(unsent) .. ")",
             bold     = true,
             callback = function()
-                open_child(function()
-                    CardManager.send_all_unsent(config, ui, {
-                        on_done = function()
-                            reopen_hub()
-                        end,
-                    })
-                end)
+                CardManager.send_all_unsent(config, ui, {
+                    on_done = function()
+                        reopen_hub()
+                    end,
+                })
             end,
         })
     end

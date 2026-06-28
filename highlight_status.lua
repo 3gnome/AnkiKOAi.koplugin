@@ -31,4 +31,14 @@ function HighlightStatus.mark_sent(ui, pos0, pos1)
     HighlightStatus.set_color(ui, pos0, pos1, PluginConstants.HIGHLIGHT_COLOR_SENT)
 end
 
+function HighlightStatus.remove_highlight(ui, pos0, pos1)
+    local ann, idx = find_annotation(ui, pos0, pos1)
+    if not idx then return false end
+    if ui and ui.highlight and ui.highlight.deleteHighlight then
+        ui.highlight:deleteHighlight(idx)
+        return true
+    end
+    return false
+end
+
 return HighlightStatus

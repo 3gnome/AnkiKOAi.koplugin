@@ -106,6 +106,45 @@ local function escape_deck_query(deck_name)
     return (deck_name or ""):gsub("\\", "\\\\"):gsub('"', '\\"')
 end
 
+local function escape_query_term(text)
+    return (text or ""):gsub("\\", "\\\\"):gsub('"', '\\"')
+end
+
+function AnkiSync.is_duplicate_error(err)
+    if not err or err == "" then return false end
+    return err:lower():find("duplicate", 1, true) ~= nil
+end
+
+function AnkiSync.is_network_error(err)
+    if not err or err == "" then return false end
+    local lower = err:lower()
+    return lower:find("cannot reach", 1, true)
+        or lower:find("timeout", 1, true)
+        or lower:find("http error", 1, true)
+        or lower:find("connection refused", 1, true)
+        or lower:find("unreachable", 1, true)
+end
+
+-- Batch reconciliation: find a note by deck, model, and primary field (Phrase).
+function AnkiSync.note_exists_in_deck(url, deck_name, model_name, phrase, field_name)
+    field_name = field_name or "Phrase"
+    local term = (phrase or ""):match("^%s*(.-)%s*$")
+    if term == "" or not url or url == "" or not deck_name or deck_name == "" then
+        return false
+    end
+    local model_part = ""
+    if model_name and model_name ~= "" then
+        model_part = ' note:"' .. escape_query_term(model_name) .. '"'
+    end
+    local query = 'deck:"' .. escape_deck_query(deck_name) .. '"' .. model_part
+        .. " " .. field_name .. ':"' .. escape_query_term(term) .. '"'
+    local result, err = post(url, "findNotes", { query = query })
+    if not result then return false, err end
+    if type(result.error) == "string" then return false, result.error end
+    if type(result.result) ~= "table" then return false, "Unexpected findNotes response" end
+    return #result.result > 0
+end
+
 function AnkiSync.find_note_ids_in_deck(url, deck_name)
     if not url or url == "" or not deck_name or deck_name == "" then
         return nil, "Deck name not set"
@@ -221,9 +260,9 @@ function AnkiSync.add_notes_batch(url, notes)
     return sent, failed, last_err
 end
 
-function AnkiSync.send_card(config, card, opts)
+local function prepare_send_payload(config, card, opts)
     if not config or not config.url or config.url == "" then
-        return nil, "Anki URL not configured"
+        return nil, nil, nil, nil, "Anki URL not configured"
     end
 
     opts = opts or {}
@@ -247,7 +286,7 @@ function AnkiSync.send_card(config, card, opts)
 
     local deck_name = AnkiSync.resolve_deck_name(config, card, base_deck)
     local ensured, deck_err = AnkiSync.ensure_deck(config.url, deck_name)
-    if not ensured then return nil, deck_err end
+    if not ensured then return nil, nil, nil, nil, deck_err end
 
     if NoteTypeProfiles.is_wiki_card(model) and WikiSources.is_enabled(config) then
         local existing = (card.anki_fields and card.anki_fields.Links) or card.links or ""
@@ -277,6 +316,41 @@ function AnkiSync.send_card(config, card, opts)
         },
         tags = (config.tags_enabled == false) and {} or (config.tags or { "KOReader" }),
     }
+
+    return note, deck_name, model, fields, nil
+end
+
+-- Batch send helper: sent | duplicate | verified | failed
+function AnkiSync.send_card_with_status(config, card, opts)
+    local note, deck_name, model, fields, prep_err = prepare_send_payload(config, card, opts)
+    if not note then
+        return "failed", nil, nil, prep_err
+    end
+
+    local result, err = post(config.url, "addNote", { note = note })
+    if result and type(result.error) ~= "string" then
+        return "sent", deck_name, model, nil
+    end
+
+    local err_msg = (result and type(result.error) == "string" and result.error) or err or "unknown"
+    if AnkiSync.is_duplicate_error(err_msg) then
+        return "duplicate", deck_name, model, err_msg
+    end
+    if AnkiSync.is_network_error(err_msg) then
+        local phrase = (fields and fields.Phrase) or card.phrase or ""
+        local exists = AnkiSync.note_exists_in_deck(
+            config.url, deck_name, model, phrase, "Phrase")
+        if exists then
+            return "verified", deck_name, model, err_msg
+        end
+    end
+    return "failed", deck_name, model, err_msg
+end
+
+function AnkiSync.send_card(config, card, opts)
+    opts = opts or {}
+    local note, deck_name, model, _fields, prep_err = prepare_send_payload(config, card, opts)
+    if not note then return nil, prep_err end
 
     local result, err = post(config.url, "addNote", { note = note })
     if not result then return nil, err end
