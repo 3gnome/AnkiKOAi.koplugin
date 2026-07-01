@@ -644,9 +644,10 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
     SelectableMenu.append_list(items, list_opts)
 
     local total_label = tostring(#highlights) .. _(" highlight(s)")
+    local title_prefix = inbox_opts.title_prefix or _("Highlights to Anki")
     Nav.prepend_back(items, nil, menu_ref, back_label)
     local m = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
-        title      = _("Highlights to Anki  (") .. total_label .. ")",
+        title      = title_prefix .. "  (" .. total_label .. ")",
         item_table = items,
     }), function()
         if guard.busy then return end

@@ -42,6 +42,7 @@ function CardReconcile.finish(item, anki_config, ui, opts)
     local deck = opts.deck or card.target_deck or ""
     local model = opts.model or effective_model(anki_config, card)
     local status = opts.status or "sent"
+    local pos0, pos1 = card.highlight_pos0, card.highlight_pos1
 
     CardStorage.record_recent_sent({
         phrase      = card.phrase or "",
@@ -51,11 +52,12 @@ function CardReconcile.finish(item, anki_config, ui, opts)
         model       = model,
         status      = status,
         sent_at     = os.time(),
+        highlight_pos0 = pos0,
+        highlight_pos1 = pos1,
     })
 
     CardStorage.delete_matching_card(card)
 
-    local pos0, pos1 = card.highlight_pos0, card.highlight_pos1
     if ui and pos0 then
         local kind = card_kind_for(card, anki_config)
         if kind == "wiki" then

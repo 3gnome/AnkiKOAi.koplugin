@@ -44,6 +44,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 - **Memorization Card (No AI, Multi-Line)** — overlapping step cards + full-recitation card for poetry and prose ([AnkiLPCG](https://ankilpcg.readthedocs.io/)-style)
 - **AnkiConnect** — send to desktop Anki; optional auto-sync to AnkiWeb after send
 - **My Cards** — pending outbox only; **Recently sent** log for confirmed sends; manual batch send shows **Sending… N/M** progress; batch send reconciles duplicates/timeouts and removes cards from the queue
+- **View All Highlights** — checklist of every highlight in the current book from the highlight menu (or AnkiKOAi hub): multi-select, **Delete Selected Highlights**, or batch send as Wiki/Vocab/Memorization
 - **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync; gray rows = tap for help (no file editing on device)
 - **One-tap send** — per card type: skip note-type/deck prompts and send straight to your default deck
 - **Multiple AI providers** — DashScope, Gemini, OpenAI, OpenRouter
@@ -53,7 +54,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 1. Install the plugin into `koreader/plugins/AnkiKOAi.koplugin/`
 2. Set up three Anki note types: **Wiki Card**, **Vocabulary Card**, and **Memorization**
 3. Configure AnkiConnect on your PC and enter your LAN URL in plugin Settings
-4. Long-press a word or highlight text → **AnkiKOAi** (bottom of the highlight menu) → choose a card type. Or long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card**.
+4. Long-press a word or highlight text → **View All Highlights**, **AnkiKOAi**, or **Memorize** (scroll the highlight menu). **AnkiKOAi** opens the hub for card types, **My Cards**, and settings. Or long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card**.
 
 **Full walkthrough:** [docs/getting-started.md](docs/getting-started.md)
 
@@ -63,6 +64,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 |-------|----------|
 | [Documentation index](docs/README.md) | Overview of all guides |
 | [Getting started](docs/getting-started.md) | Install, AnkiConnect, first card |
+| [Plugin & recent work summary](docs/plugin-and-recent-work-summary.md) | Architecture, TagBank companion, dev session notes |
 | [Plugin configuration](docs/plugin-configuration.md) | API keys, settings UI, `configuration.lua` |
 | [Anki: Wiki Card setup](docs/anki-vocabulary.md) | AI + wiki note type, templates, CSS, deck options |
 | [Anki: Vocabulary Card setup](docs/anki-vocabulary-card.md) | Dictionary-only note type (no AI) |
@@ -189,17 +191,31 @@ Details: [docs/plugin-configuration.md](docs/plugin-configuration.md). In Settin
 ## Development (WSL emulator)
 
 ```bash
-bash start.sh
-bash start.sh alice.epub   # optional sample book
+# AnkiKOAi + TagBankHighlightSync: sync both, launch once (recommended)
+bash dev-start.sh --emulator alice.epub
+
+# One-time WebDAV + cloud plugin setup (TagBankHighlightSync repo):
+# bash /mnt/c/Users/small/tagbankhighlightsync.koplugin/setup-emulator-cloud.sh
+# bash /mnt/c/Users/small/tagbankhighlightsync.koplugin/configure-emulator-webdav.sh
+
+# Sync without launching (then launch once manually or via dev-start.sh without --sync-only)
+bash dev-start.sh --sync-only
+
+# AnkiKOAi only
+bash start.sh --emulator alice.epub
+bash start.sh --sync-only
 ```
 
 Set `KOREADER_DIR` if your emulator is not at `~/koreader-dev/emulator/usr/lib/koreader`.
 
-For Cursor / local AI context: copy `LOCAL_DEV.md.sample` → `LOCAL_DEV.md` (gitignored) or use `@LOCAL_DEV.md` in chat.
+On WSL, avoid two full emulator launches per session — a second launch often triggers WSLg
+`[WARN: COPY MODE]` in the taskbar (not in terminal logs). AppImage from WSL still uses WSLg.
+
+For Cursor / local AI context: copy `LOCAL_DEV.md.sample` → `LOCAL_DEV.md` (gitignored). Open the 3-folder workspace: **Ctrl+Shift+N** → **Ctrl+Shift+P** → **Open Workspace from File...** → `C:\Users\small\koreader-dev.code-workspace` (Glass/Agents cannot open `.code-workspace`; use the Editor). Or: `cursor C:\Users\small\koreader-dev.code-workspace --classic`. Attach `@LOCAL_DEV.md` in chat anytime.
 
 ## About this plugin
 
-**AnkiKOAi** connects reading on KOReader to spaced repetition in Anki. Highlight text → **AnkiKOAi** → **Wiki Card (AI)**, **Vocabulary Card (No AI)**, **Memorization Card (No AI, Multi-Line)**, saved cards, batch highlights, or settings.
+**AnkiKOAi** connects reading on KOReader to spaced repetition in Anki. Highlight text → **View All Highlights** (browse/delete/batch), **AnkiKOAi** hub → **Wiki Card (AI)**, **Vocabulary Card (No AI)**, **Memorization Card (No AI, Multi-Line)**, **My Cards**, batch highlights, or settings.
 
 ## Publishing / cloning safely
 

@@ -6,6 +6,7 @@ local InfoMessage = require("ui/widget/infomessage")
 local _          = require("gettext")
 
 local CardManager     = require("card_manager")
+local HighlightInbox  = require("highlight_inbox")
 local CardStorage     = require("card_storage")
 local CardDefaults    = require("card_defaults")
 local PluginConstants = require("plugin_constants")
@@ -163,6 +164,30 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
     end)
 
     table.insert(items, section_label(_("Library & batch")))
+    table.insert(items, {
+        text     = _("View All Highlights"),
+        bold     = true,
+        callback = function()
+            if not ui then
+                UIManager:show(InfoMessage:new {
+                    text    = _("Open a book to view highlights"),
+                    timeout = 3,
+                })
+                return
+            end
+            if not HighlightInbox.has_highlights(ui) then
+                HighlightInbox.notify_empty()
+                return
+            end
+            open_child(function()
+                HighlightInbox.show(ui, config, {
+                    on_back      = reopen_hub,
+                    back_label   = _("← Back to AnkiKOAi"),
+                    title_prefix = _("View All Highlights"),
+                })
+            end)
+        end,
+    })
     local unsent = CardStorage.count_unsent()
     if unsent > 0 then
         table.insert(items, {

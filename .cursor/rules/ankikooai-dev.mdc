@@ -7,17 +7,28 @@ alwaysApply: true
 
 At the **start of each session** (before large edits or debugging), read:
 
-1. **`LOCAL_DEV.md`** if it exists (gitignored, machine-specific)
+0. **`koreader-dev/WORKSPACE_SESSION.md`** — where we left off (rolling catch-up; gitignored)
+1. **`LOCAL_DEV.md`** if it exists (gitignored — goals + machine paths)
 2. Otherwise **`LOCAL_DEV.md.sample`**
 
+Pay special attention to **Your goals & current focus** in `LOCAL_DEV.md`.
+
+At **end of significant work**, update **`koreader-dev/WORKSPACE_SESSION.md`** (last summary, next up, uncommitted work).
+
 The user may also attach **`@LOCAL_DEV.md`** explicitly.
+
+**Cross-repo:** If the task touches sync, tags, quote library, or WebDAV, also skim TagBank
+`LOCAL_DEV.md.sample` § Quote library validation and Cloud folder.
+
+**Workspace:** `C:\Users\small\koreader-dev.code-workspace` — open in **Editor** (**Ctrl+Shift+N**), then **Open Workspace from File...** (Glass/Agents cannot load `.code-workspace`). Both plugins in `C:\Users\small\`.
 
 ## Quick reminders
 
 - Plugin code: `*.lua` at repo root. Settings UI: `settings_viewer.lua`. Deck/model API: `card_defaults.lua`.
 - **Card defaults** = per-type note type + deck; **hub labels** = `wiki_card_hub_label` / `vocabulary_card_hub_label` (empty → `PluginConstants`); **Where cards go** = subdeck/per-book overrides (Wiki/Vocab); **Deck picker shortcuts** = favorites/recent for manual send; **Settings menus** = gray dim rows for tap-to-help (`SETTINGS_HELP_SUBTITLE`); **Prompts & suffix** = wiki note type only, built-in vs effective preview helpers in `prompt_builder.lua`.
-- Dev launch: `bash start.sh --emulator alice.epub` (WSL). Use `tee ~/koreader-emulator.log` for logs.
+- Dev launch: `bash dev-start.sh --emulator alice.epub` (WSL). Use `tee ~/koreader-emulator.log` for logs.
 - `addToHighlightDialog` callbacks must not return `nil` — use `show_in_highlight_dialog_func`.
-- Highlight hub ids use `99_ankikooai` prefix (`PluginConstants.HIGHLIGHT_DIALOG_ID_*`) so buttons sort after core `01_highlight`… entries on v2026.03 (bottom of menu).
+- Highlight hub ids use `97_…` / `98_…` / `99_ankikooai` prefixes (`PluginConstants.HIGHLIGHT_DIALOG_ID_*`) so plugin buttons sort after core `01_highlight`… entries on v2026.03 (scroll highlight menu). **View All Highlights** = `97_ankikooai_view_all`.
+- **View All Highlights** → `highlight_inbox.lua` (select, delete, batch Anki send). Also under AnkiKOAi hub → Library & batch.
 - Manual batch send (`CardManager.send_all_unsent` / `send_batch_items`): **Sending… N/M** toast in `card_manager.lua`; skip when `opts.background` (auto WiFi flush).
 - Never commit `configuration.lua`, `LOCAL_DEV.md`, API keys, or `*_settings.json`.

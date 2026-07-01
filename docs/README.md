@@ -12,6 +12,7 @@ Guides for setting up Anki decks that match this plugin, configuring KOReader, a
 | [Anki: Vocabulary Card setup](anki-vocabulary-card.md) | **Vocabulary Card** note type (dictionary only, no AI) |
 | [Anki: Memorization deck](anki-memorization.md) | **Memorization** note type, step/full cards, filtered deck, study routine |
 | [Publishing & discoverability](publishing.md) | GitHub setup, descriptions, topics, releases, AppStore |
+| [Plugin & recent work summary](plugin-and-recent-work-summary.md) | What AnkiKOAi is, TagBank companion, recent dev session work |
 
 ## Copy-paste reference (use on your computer)
 

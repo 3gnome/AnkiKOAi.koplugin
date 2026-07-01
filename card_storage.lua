@@ -101,6 +101,8 @@ function CardStorage.record_recent_sent(entry)
         model      = entry.model or "",
         status     = entry.status or "sent",
         sent_at    = entry.sent_at or os.time(),
+        highlight_pos0 = entry.highlight_pos0,
+        highlight_pos1 = entry.highlight_pos1,
     })
     while #entries > RECENT_SENT_MAX do
         table.remove(entries)
@@ -114,33 +116,6 @@ end
 
 function CardStorage.clear_recent_sent()
     save_recent_raw({})
-end
-
-function CardStorage.purge_sent_cards()
-    local ok_load, entries = pcall(load_raw)
-    if not ok_load or type(entries) ~= "table" then
-        logger.warn(PluginConstants.ID, "purge_sent_cards: load failed:", entries)
-        purge_done = true
-        return
-    end
-    local kept = {}
-    for _i, e in ipairs(entries) do
-        if type(e) == "table" and not e.sent_to_anki then
-            table.insert(kept, e)
-        end
-    end
-    if #kept ~= #entries then
-        if not save_raw(kept) then
-            logger.warn(PluginConstants.ID, "purge_sent_cards: save failed")
-        end
-    end
-    purge_done = true
-end
-
-function CardStorage.ensure_queue_migrated()
-    if not purge_done then
-        CardStorage.purge_sent_cards()
-    end
 end
 
 local function load_raw()
@@ -180,6 +155,33 @@ local function save_raw(entries)
     logger.warn(PluginConstants.ID, "save_raw: rename of temp file failed:", tmp)
     os.remove(tmp)
     return false
+end
+
+function CardStorage.purge_sent_cards()
+    local ok_load, entries = pcall(load_raw)
+    if not ok_load or type(entries) ~= "table" then
+        logger.warn(PluginConstants.ID, "purge_sent_cards: load failed:", entries)
+        purge_done = true
+        return
+    end
+    local kept = {}
+    for _i, e in ipairs(entries) do
+        if type(e) == "table" and not e.sent_to_anki then
+            table.insert(kept, e)
+        end
+    end
+    if #kept ~= #entries then
+        if not save_raw(kept) then
+            logger.warn(PluginConstants.ID, "purge_sent_cards: save failed")
+        end
+    end
+    purge_done = true
+end
+
+function CardStorage.ensure_queue_migrated()
+    if not purge_done then
+        CardStorage.purge_sent_cards()
+    end
 end
 
 -- Identity test used for de-duplication / upsert. Memorization passages are

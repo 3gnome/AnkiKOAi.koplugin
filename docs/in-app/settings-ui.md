@@ -15,6 +15,10 @@ For the full reference on your computer, see **docs/plugin-configuration.md**.
 | **AI Settings** | Wiki Card (AI) provider, keys, accuracy, language, prompts |
 | **Sync…** | Background send when WiFi is on (every 20 min), cloud backup |
 
+## View All Highlights
+
+Open from the **highlight menu** or **AnkiKOAi hub** (not under Settings). Shows every highlight in the open book: select rows, **Delete Selected Highlights**, or batch-send as Wiki / Vocabulary / Memorization. Same checklist as **Highlights and Cards → Highlights to Anki**.
+
 Tap **View settings guide** on the main screen to reopen this document.
 
 ## Card defaults — hub menu labels

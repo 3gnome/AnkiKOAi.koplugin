@@ -25,6 +25,8 @@ alice.epub
 .DS_Store
 Thumbs.db
 desktop.ini
+nul
+debug_*.png
 .vscode/
 .idea/
 *.swp

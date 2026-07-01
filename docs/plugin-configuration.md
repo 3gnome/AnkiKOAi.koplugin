@@ -40,6 +40,18 @@ Open from **AnkiKOAi → Settings** or the plugin hub menu.
 | **AI Settings** | Provider, language, wiki sources, strict accuracy, prompts (gray **About …** rows) |
 | **Sync…** | Send pending cards when WiFi is on (every **20 minutes**, silent), cloud backup |
 
+### View All Highlights
+
+Not a Settings screen — opened from the **highlight menu** (**View All Highlights**) or **AnkiKOAi hub → View All Highlights** (same checklist as **Highlights and Cards → Highlights to Anki**).
+
+| Action | Description |
+|--------|-------------|
+| Checklist | Every highlight in the **current book** (any color) |
+| **Delete Selected Highlights** | Removes highlights from the book and deletes matching pending AnkiKOAi cards (by phrase) |
+| Batch send | Switch mode (Wiki / Vocabulary / Memorization) and send selected highlights to Anki |
+
+After a successful background send, orphan **orange** vocabulary/memorization highlights may be removed automatically on next plugin load (`highlight_cleanup.lua`).
+
 ### Card defaults
 
 | Submenu | Settings |
@@ -228,7 +240,7 @@ On device, open **Settings → View settings guide** or see **docs/in-app/settin
 | Send pending when WiFi (every 20 min) | Settings → Sync |
 | Cloud sync | Optional backup of pending cards to a sync server |
 
-Highlight colors (KOReader): **orange** = pending in My Cards queue; **green** = wiki card confirmed in Anki (highlight kept). Vocabulary and memorization highlights are **removed** from the book after a successful send when the book is open. Background auto-send (no book open) still deletes queue rows and logs **Recently sent**, but cannot remove highlights without an open book.
+Highlight colors (KOReader): **orange** = pending in My Cards queue; **green** = wiki card confirmed in Anki (highlight kept). Vocabulary and memorization highlights are **removed** from the book after a successful send when the book is open. Background auto-send (no book open) still deletes queue rows and logs **Recently sent**, but cannot remove highlights until you reopen the book — AnkiKOAi then removes matching **orange** vocab/mem highlights on init (positions stored in Recently sent). Run **Tag Bank Highlight Sync → Sync now** so Obsidian `library/` matches the sidecar JSON.
 
 **Send pending when WiFi (every 20 min):** When ON and WiFi is up, pending cards in **My Cards** are flushed to AnkiConnect silently in the background (no progress overlay). If Anki is unreachable, the plugin backs off up to an hour between attempts. Turn OFF while reading without Anki to avoid any network activity.
 
@@ -249,5 +261,6 @@ Legacy `sent_to_anki` rows in an old `ankikooai_cards.json` are purged on first 
 ## Related guides
 
 - [Getting started](getting-started.md)
+- [Plugin & recent work summary](plugin-and-recent-work-summary.md)
 - [Anki: Vocabulary deck](anki-vocabulary.md)
 - [Anki: Memorization deck](anki-memorization.md)

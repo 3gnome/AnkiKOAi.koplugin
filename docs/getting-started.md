@@ -19,7 +19,7 @@ koreader/plugins/AnkiKOAi.koplugin/
 
 The folder name **must** end in `.koplugin`.
 
-Restart KOReader. After you select text (long-press or drag), **AnkiKOAi** appears at the bottom of the highlight menu (scroll if you have many plugins). You can also long-press a word → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** (same row).
+Restart KOReader. After you select text (long-press or drag), scroll the highlight menu for **View All Highlights**, **Memorize**, and **AnkiKOAi** (near the bottom when many plugins are installed). You can also long-press a word → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** (same row).
 
 ## Step 2 — Set up Anki (one-time)
 
@@ -121,11 +121,12 @@ See [Anki: Memorization deck](anki-memorization.md) for study routine and filter
 | Wiki Card generation fails | Check API key and Wi‑Fi |
 | Dictionary lookup fails | Install/enable StarDict dictionaries in KOReader |
 | Card sent to wrong deck | Check the card type’s default deck under **Card defaults**; one-tap send uses that deck, not your last manual pick |
-| No **AnkiKOAi** in menu | Restart KOReader; confirm `.koplugin` folder name; plugin enabled under Tools → Plugin management. **AnkiKOAi** is at the bottom of the highlight menu (scroll down). Alternative: long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** |
+| No **AnkiKOAi** in menu | Restart KOReader; confirm `.koplugin` folder name; plugin enabled under Tools → Plugin management. Scroll the highlight menu for **AnkiKOAi** / **View All Highlights**. Alternative: long-press → **Dictionary** → **AnkiKOAi** or **Create Vocab Card** |
 
 ## Next steps
 
-- Batch highlights: **AnkiKOAi → Highlights and Cards** (Wiki, Vocabulary, or Memorization batch)
+- **View all highlights in this book:** highlight menu → **View All Highlights** (or **AnkiKOAi → View All Highlights**) — checklist with **Delete Selected Highlights** and batch send (Wiki / Vocabulary / Memorization mode)
+- Batch highlights (same screen via manage menu): **AnkiKOAi → Highlights and Cards → Highlights to Anki**
 - Edit pending cards: **My Cards**
   - **My Cards** holds only cards waiting to send (outbox). Confirmed sends are removed from the queue and logged under **Recently sent**.
   - **Send pending to Anki** at the top, or open a book → **Send Selected to Anki** — while sending, a toast shows **Sending… N/M** (menus may close first, e.g. from the hub); a summary appears when done

@@ -30,6 +30,7 @@ local ReadingLocation  = require("reading_location")
 local HighlightStatus  = require("highlight_status")
 local PoetryMemorize   = require("poetry_memorize")
 local PluginMenu       = require("plugin_menu")
+local HighlightInbox   = require("highlight_inbox")
 
 local DictionaryLookup
 do
@@ -924,6 +925,22 @@ local function open_hub_from_context(hl, ctx, ui)
     end)
 end
 
+local function open_highlight_inbox(hl, ctx, ui, inbox_opts)
+    inbox_opts = inbox_opts or {}
+    if not HighlightInbox.has_highlights(ui) then
+        HighlightInbox.notify_empty()
+        return
+    end
+    inbox_opts.title_prefix = inbox_opts.title_prefix or _("View All Highlights")
+    if hl and ctx and not inbox_opts.on_back then
+        inbox_opts.on_back = function()
+            reopen_highlight_menu(hl, ctx.index, ctx.selected_text)
+        end
+        inbox_opts.back_label = inbox_opts.back_label or _("← Back to highlight menu")
+    end
+    HighlightInbox.show(ui, CONFIGURATION, inbox_opts)
+end
+
 local function dict_popup_context(hl, popup)
     local ctx = capture_highlight_context(hl, nil)
     if not ctx.text or ctx.text == "" then
@@ -972,6 +989,11 @@ function AnkiKOAi:init()
         return
     end
 
+    local HighlightCleanup = require("highlight_cleanup")
+    UIManager:nextTick(function()
+        HighlightCleanup.run(self.ui)
+    end)
+
     -- ── AnkiKOAi hub (single highlight-menu entry) ──────────────────────────
     local ok, err = pcall(function()
     self.ui.highlight:addToHighlightDialog(PluginConstants.HIGHLIGHT_DIALOG_ID_HUB, function(hl, index)
@@ -1001,6 +1023,21 @@ function AnkiKOAi:init()
                 release_highlight_for_reading(hl)
                 UIManager:scheduleIn(0.05, function()
                     run_memorization_flow(hl, ctx, self.ui, {})
+                end)
+            end,
+        }
+    end)
+
+    self.ui.highlight:addToHighlightDialog(PluginConstants.HIGHLIGHT_DIALOG_ID_VIEW_ALL, function(hl, index)
+        return {
+            text    = _("View All Highlights"),
+            enabled = true,
+            callback = function()
+                local ctx = capture_highlight_context(hl, index)
+                dismiss_highlight_dialog(hl)
+                release_highlight_for_reading(hl)
+                UIManager:scheduleIn(0.05, function()
+                    open_highlight_inbox(hl, ctx, self.ui)
                 end)
             end,
         }

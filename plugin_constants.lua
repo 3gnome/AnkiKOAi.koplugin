@@ -18,6 +18,7 @@ return {
     HIGHLIGHT_COLOR_SENT  = "green",
 
     -- KOReader sorts highlight-dialog buttons by id string (99_… sorts after 01_…07_).
-    HIGHLIGHT_DIALOG_ID_HUB  = "99_ankikooai",
-    HIGHLIGHT_DIALOG_ID_MEM  = "98_ankikooai_mem",
+    HIGHLIGHT_DIALOG_ID_HUB      = "99_ankikooai",
+    HIGHLIGHT_DIALOG_ID_MEM      = "98_ankikooai_mem",
+    HIGHLIGHT_DIALOG_ID_VIEW_ALL = "97_ankikooai_view_all",
 }

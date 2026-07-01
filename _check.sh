@@ -43,3 +43,9 @@ assert(C.LEGACY_CARDS_FILE == nil, "legacy constant removed")
 assert(C.CARDS_FILE == "ankikooai_cards.json", "cards file intact")
 print("plugin_constants: OK")
 '
+
+echo
+echo "=== Functional test: highlight_cleanup ==="
+"$LJ" spec/highlight_cleanup_spec.lua || fail=1
+
+exit $fail

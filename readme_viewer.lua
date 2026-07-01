@@ -122,6 +122,7 @@ Getting started with AnkiKOAi
 2. Set up AnkiConnect on your PC
 3. Create matching Anki note types (Wiki Card, Vocabulary Card, or Memorization)
 4. Configure API keys and decks in AnkiKOAi → Settings
+5. View all highlights: highlight menu → View All Highlights
 
 See docs/getting-started.md on your PC for the full guide.]]),
 
