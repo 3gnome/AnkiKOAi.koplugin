@@ -17,7 +17,13 @@ For the full reference on your computer, see **docs/plugin-configuration.md**.
 
 ## View All Highlights
 
-Open from the **highlight menu** or **AnkiKOAi hub** (not under Settings). Shows every highlight in the open book: select rows, **Delete Selected Highlights**, or batch-send as Wiki / Vocabulary / Memorization. Same checklist as **Highlights and Cards → Highlights to Anki**.
+Open from the **highlight menu** or **AnkiKOAi hub** (not under Settings).
+
+- **Switch book…** — highlights from any book in reading history
+- **Sync All Highlights** — when [Tag Bank](https://github.com/3gnome/tagbankhighlightsync.koplugin) is installed
+- Select rows, **Delete Selected Highlights** (open book only), or batch-send as Wiki / Vocabulary / Memorization
+
+Same checklist as **Highlights and Cards → Highlights to Anki**.
 
 Tap **View settings guide** on the main screen to reopen this document.
 

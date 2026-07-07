@@ -46,8 +46,10 @@ Not a Settings screen — opened from the **highlight menu** (**View All Highlig
 
 | Action | Description |
 |--------|-------------|
-| Checklist | Every highlight in the **current book** (any color) |
-| **Delete Selected Highlights** | Removes highlights from the book and deletes matching pending AnkiKOAi cards (by phrase) |
+| **Switch book…** | Open highlights from any book in reading history (live annotations on the open book; sidecar on others) |
+| **Sync All Highlights** | When [Tag Bank Highlight Sync](https://github.com/3gnome/tagbankhighlightsync.koplugin) is installed — cloud sync for all books in history |
+| Checklist | Highlights in the selected book (any color) |
+| **Delete Selected Highlights** | Open book only — removes highlights and matching pending AnkiKOAi cards (by phrase) |
 | Batch send | Switch mode (Wiki / Vocabulary / Memorization) and send selected highlights to Anki |
 
 After a successful background send, orphan **orange** vocabulary/memorization highlights may be removed automatically on next plugin load (`highlight_cleanup.lua`).

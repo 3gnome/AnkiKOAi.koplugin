@@ -74,7 +74,8 @@ cards → AnkiConnect → desktop Anki. All plugin logic is `*.lua` at the repo 
 | `card_generator.lua` | AI Wiki Card generation |
 | `dictionary_lookup.lua` | Vocabulary Card dictionary path |
 | `poetry_memorize.lua` | Memorization split + send |
-| `highlight_inbox.lua` | Batch highlight flows |
+| `highlight_inbox.lua` | Batch highlight flows; **Switch book** in View All Highlights |
+| `highlight_books.lua` | ReadHistory + sidecar discovery for cross-book inbox |
 | `card_manager.lua` | My Cards, manage, send-all-unsent, `send_batch_items` |
 
 ---
@@ -200,7 +201,7 @@ Hub button id: `99_ankikooai` (`PluginConstants.HIGHLIGHT_DIALOG_ID_HUB`) — KO
 buttons by id string; `97_` / `98_` / `99_` prefixes keep plugin entries after core
 highlight actions (scroll if many plugins). **View All Highlights** = `97_ankikooai_view_all`.
 
-**View All Highlights** opens `highlight_inbox.lua` — all book highlights, select/delete/batch send.
+**View All Highlights** opens `highlight_inbox.lua` — highlights for the current book (or **Switch book** for any book in reading history with sidecar highlights). **Sync All Highlights** runs Tag Bank cloud sync for every book in history (when Tag Bank is installed). Delete works only for the open book; batch Anki send works from sidecar text on other books.
 Also: **AnkiKOAi hub → View All Highlights** or **Highlights and Cards → Highlights to Anki**.
 
 **Dev-only reset script:** `scripts/reset_alice.sh` — PC Alice clean-slate (Anki, WebDAV, Obsidian); requires TagBank regen script in sibling repo.

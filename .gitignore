@@ -18,8 +18,9 @@ LOCAL_DEV.md
 # KOReader per-book sidecar metadata (created when opening a test book)
 *.sdr/
 
-# Local test book
+# Local test books
 alice.epub
+wizard-of-oz.epub
 
 # OS / editor
 .DS_Store

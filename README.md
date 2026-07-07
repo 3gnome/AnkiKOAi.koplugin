@@ -44,7 +44,7 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 - **Memorization Card (No AI, Multi-Line)** — overlapping step cards + full-recitation card for poetry and prose ([AnkiLPCG](https://ankilpcg.readthedocs.io/)-style)
 - **AnkiConnect** — send to desktop Anki; optional auto-sync to AnkiWeb after send
 - **My Cards** — pending outbox only; **Recently sent** log for confirmed sends; manual batch send shows **Sending… N/M** progress; batch send reconciles duplicates/timeouts and removes cards from the queue
-- **View All Highlights** — checklist of every highlight in the current book from the highlight menu (or AnkiKOAi hub): multi-select, **Delete Selected Highlights**, or batch send as Wiki/Vocab/Memorization
+- **View All Highlights** — checklist of highlights from the current book (or **Switch book…** for any book in history): multi-select, **Delete Selected Highlights** (open book only), batch send as Wiki/Vocab/Memorization; **Sync All Highlights** when [Tag Bank](https://github.com/3gnome/tagbankhighlightsync.koplugin) is installed
 - **Settings UI** — Card defaults (note types, decks, one-tap send), AI providers, memorization behavior, sync; gray rows = tap for help (no file editing on device)
 - **One-tap send** — per card type: skip note-type/deck prompts and send straight to your default deck
 - **Multiple AI providers** — DashScope, Gemini, OpenAI, OpenRouter
@@ -64,6 +64,8 @@ Highlight a poem or passage and AnkiKOAi builds LPCG-style overlapping step card
 |-------|----------|
 | [Documentation index](docs/README.md) | Overview of all guides |
 | [Getting started](docs/getting-started.md) | Install, AnkiConnect, first card |
+| [Tag Bank companion](docs/tag-bank-companion.md) | Optional tags, JSON sync, Obsidian quote library |
+| [WebDAV setup (Windows)](docs/webdav-setup-windows.md) | Local WebDAV for Tag Bank on home Wi‑Fi |
 | [Plugin & recent work summary](docs/plugin-and-recent-work-summary.md) | Architecture, TagBank companion, dev session notes |
 | [Plugin configuration](docs/plugin-configuration.md) | API keys, settings UI, `configuration.lua` |
 | [Anki: Wiki Card setup](docs/anki-vocabulary.md) | AI + wiki note type, templates, CSS, deck options |

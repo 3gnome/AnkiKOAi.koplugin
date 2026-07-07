@@ -112,6 +112,20 @@ No API key is required for the dictionary lookup itself; sending to Anki still n
 
 See [Anki: Memorization deck](anki-memorization.md) for study routine and filtered-deck setup.
 
+## Optional — Tag Bank & quote library
+
+For tagging highlights, syncing JSON across devices, and exporting an Obsidian quote library, install **[Tag Bank Highlight Sync](https://github.com/3gnome/tagbankhighlightsync.koplugin)** alongside AnkiKOAi.
+
+| Guide | Purpose |
+|-------|---------|
+| [Tag Bank companion](tag-bank-companion.md) | How the two plugins work together |
+| [WebDAV setup (Windows)](webdav-setup-windows.md) | Local WebDAV server on your PC |
+| [Tag Bank getting started](https://github.com/3gnome/tagbankhighlightsync.koplugin/blob/main/docs/getting-started.md) | Install Tag Bank, cloud folder, first sync |
+
+With both plugins: **View All Highlights → Sync All Highlights** syncs every book in reading history to cloud.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -125,7 +139,7 @@ See [Anki: Memorization deck](anki-memorization.md) for study routine and filter
 
 ## Next steps
 
-- **View all highlights in this book:** highlight menu → **View All Highlights** (or **AnkiKOAi → View All Highlights**) — checklist with **Delete Selected Highlights** and batch send (Wiki / Vocabulary / Memorization mode)
+- **View all highlights:** highlight menu → **View All Highlights** — **Switch book…**, **Sync All Highlights** (with Tag Bank), delete (open book), batch send
 - Batch highlights (same screen via manage menu): **AnkiKOAi → Highlights and Cards → Highlights to Anki**
 - Edit pending cards: **My Cards**
   - **My Cards** holds only cards waiting to send (outbox). Confirmed sends are removed from the queue and logged under **Recently sent**.

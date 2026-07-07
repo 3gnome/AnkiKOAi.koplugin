@@ -927,10 +927,6 @@ end
 
 local function open_highlight_inbox(hl, ctx, ui, inbox_opts)
     inbox_opts = inbox_opts or {}
-    if not HighlightInbox.has_highlights(ui) then
-        HighlightInbox.notify_empty()
-        return
-    end
     inbox_opts.title_prefix = inbox_opts.title_prefix or _("View All Highlights")
     if hl and ctx and not inbox_opts.on_back then
         inbox_opts.on_back = function()
@@ -1028,10 +1024,16 @@ function AnkiKOAi:init()
         }
     end)
 
-    self.ui.highlight:addToHighlightDialog(PluginConstants.HIGHLIGHT_DIALOG_ID_VIEW_ALL, function(hl, index)
+    self.ui.highlight:addToHighlightDialog(
+        PluginConstants.HIGHLIGHT_DIALOG_ID_VIEW_ALL or "97_ankikooai_view_all",
+        function(hl, index)
         return {
             text    = _("View All Highlights"),
+            font_bold = true,
             enabled = true,
+            show_in_highlight_dialog_func = function()
+                return true
+            end,
             callback = function()
                 local ctx = capture_highlight_context(hl, index)
                 dismiss_highlight_dialog(hl)

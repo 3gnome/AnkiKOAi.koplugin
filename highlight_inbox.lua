@@ -21,6 +21,8 @@ local PoetryMemorize  = require("poetry_memorize")
 local PluginConstants = require("plugin_constants")
 local ReadingLocation = require("reading_location")
 local get_selection_in_context = require("selection_context")
+local HighlightBooks = require("highlight_books")
+local PluginPeers = require("plugin_peers")
 local HighlightInbox  = {}
 local Nav             = require("nav")
 local SelectableMenu  = require("selectable_menu")
@@ -77,29 +79,31 @@ local function next_mode(mode)
     return MODE_WIKI
 end
 
-local function build_highlights(ui)
-    local raw = (ui.annotation and ui.annotation.annotations) or {}
-    local highlights = {}
-    for idx, ann in ipairs(raw) do
-        if ann.drawer and ann.text and ann.text ~= "" then
-            table.insert(highlights, {
-                ann       = ann,
-                ann_index = idx,
-                text      = ann.text,
-                chapter   = ann.chapter,
-            })
-        end
+local function build_highlights(ui, book_ctx)
+    if book_ctx and book_ctx.path then
+        return HighlightBooks.load_highlights_for_book(book_ctx.path, ui)
     end
-    return highlights
+    return HighlightBooks.load_highlights_for_book(ui and ui.document and ui.document.file, ui)
 end
 
 function HighlightInbox.has_highlights(ui)
-    return #build_highlights(ui) > 0
+    if not ui or not ui.document then
+        return false
+    end
+    local current = ui.document.file
+    if current then
+        local live = HighlightBooks.load_highlights_for_book(current, ui)
+        if #live > 0 then
+            return true
+        end
+    end
+    local books = HighlightBooks.discover_books_with_highlights(current, ui)
+    return #books > 0
 end
 
 function HighlightInbox.notify_empty()
     UIManager:show(Notification:new {
-        text    = _("No highlights found in this book."),
+        text    = _("No highlights found in your reading history."),
         timeout = 3,
     })
 end
@@ -125,9 +129,13 @@ local function default_selected(highlights, already_carded, send_mode)
 end
 
 -- Internal: build and show the selection menu with current state.
-local function show_menu(ui, config, highlights, already_carded, selected, inbox_opts, send_mode)
+local function show_menu(ui, config, highlights, already_carded, selected, inbox_opts, send_mode, book_ctx)
     inbox_opts = inbox_opts or {}
     send_mode = send_mode or MODE_WIKI
+    book_ctx = book_ctx or HighlightBooks.make_book_ctx(nil, ui)
+    if book_ctx then
+        HighlightBooks.refresh_book_ctx_count(book_ctx, ui)
+    end
     local menu_ref = {}
     local back_label = inbox_opts.back_label or _("← Back")
     local guard = { busy = false }
@@ -146,21 +154,119 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
     local function soft_rebuild()
         UIManager:scheduleIn(0, function()
             if menu_ref[1] then UIManager:close(menu_ref[1]) end
-            show_menu(ui, config, highlights, already_carded, selected, inbox_opts, send_mode)
+            show_menu(ui, config, highlights, already_carded, selected, inbox_opts, send_mode, book_ctx)
         end)
     end
 
     local function hard_rebuild()
         UIManager:scheduleIn(0, function()
             if menu_ref[1] then UIManager:close(menu_ref[1]) end
-            local fresh = build_highlights(ui)
+            local fresh = build_highlights(ui, book_ctx)
             local carded = load_already_carded()
+            if book_ctx then
+                HighlightBooks.refresh_book_ctx_count(book_ctx, ui)
+            end
             show_menu(ui, config, fresh, carded, default_selected(fresh, carded, send_mode),
-                inbox_opts, send_mode)
+                inbox_opts, send_mode, book_ctx)
         end)
     end
 
+    local function show_switch_book_menu()
+        local books = HighlightBooks.discover_books_with_highlights(
+            ui and ui.document and ui.document.file, ui)
+        if #books <= 1 then
+            UIManager:show(Notification:new {
+                text    = _("No other books with highlights."),
+                timeout = 3,
+            })
+            return
+        end
+        local picker_ref = {}
+        local items = {}
+        for _, book in ipairs(books) do
+            local pick = book
+            items[#items + 1] = {
+                text = pick.title .. " (" .. tostring(pick.count) .. ")",
+                mandatory_func = function()
+                    return book_ctx and pick.path == book_ctx.path and "✓" or ""
+                end,
+                callback = function()
+                    if picker_ref[1] then UIManager:close(picker_ref[1]) end
+                    if menu_ref[1] then UIManager:close(menu_ref[1]) end
+                    local new_ctx = {
+                        path = pick.path,
+                        title = pick.title,
+                        is_current = pick.is_current,
+                        count = pick.count,
+                    }
+                    local fresh = build_highlights(ui, new_ctx)
+                    local carded = load_already_carded()
+                    show_menu(ui, config, fresh, carded,
+                        default_selected(fresh, carded, send_mode),
+                        inbox_opts, send_mode, new_ctx)
+                end,
+            }
+        end
+        Nav.prepend_back(items, nil, picker_ref, _("← Back"))
+        picker_ref[1] = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
+            title = _("Switch book"),
+            item_table = items,
+        }), function()
+            if picker_ref[1] then UIManager:close(picker_ref[1]) end
+        end)
+        Nav.show(picker_ref[1])
+    end
+
+    local function book_title_author()
+        if book_ctx and not book_ctx.is_current then
+            local meta = HighlightBooks.read_book_metadata(book_ctx.path)
+            return meta.title, meta.author
+        end
+        local book_props = (ui.document and ui.document:getProps()) or {}
+        local title = clean(book_props.title or "", 100)
+        local author = book_props.authors or ""
+        if type(author) == "table" then author = table.concat(author, ", ") end
+        author = clean((author ~= "" and author or "Unknown Author"), 100)
+        if title == "" and book_ctx then
+            title = clean(book_ctx.title or "", 100)
+        end
+        return title, author
+    end
+
     local items   = {}
+
+    if book_ctx then
+        table.insert(items, {
+            text = _("Switch book…") .. "  (" .. book_ctx.title .. ")",
+            bold = true,
+            callback = show_switch_book_menu,
+        })
+        if not book_ctx.is_current then
+            table.insert(items, {
+                text = _("Open this book to delete highlights."),
+                dim = true,
+                enabled = false,
+                keep_menu_open = true,
+            })
+        end
+        if PluginPeers.is_tagbank_available(ui) then
+            table.insert(items, {
+                text = _("Sync All Highlights"),
+                bold = true,
+                callback = function()
+                    local tagbank = PluginPeers.get_tagbank_plugin(ui)
+                    if tagbank and tagbank.syncAllBooksFromHistory then
+                        tagbank:syncAllBooksFromHistory()
+                    else
+                        UIManager:show(Notification:new {
+                            text    = _("Tag Bank Highlight Sync is not available."),
+                            timeout = 3,
+                        })
+                    end
+                end,
+            })
+        end
+    end
 
     local function selected_for_generate()
         local to_do = {}
@@ -202,7 +308,7 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
 
     local function highlight_context(h)
         local raw = h.text or ""
-        if ui and ui.document then
+        if book_ctx and book_ctx.is_current and ui and ui.document then
             return clean(get_selection_in_context(ui.document, raw, 10), 2000)
         end
         return clean(raw, 2000)
@@ -540,11 +646,7 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
             menu_ref[1] = nil
             guard.busy = false
 
-            local book_props = (ui.document and ui.document:getProps()) or {}
-            local title = clean(book_props.title or "", 100)
-            local author = book_props.authors or ""
-            if type(author) == "table" then author = table.concat(author, ", ") end
-            author = clean((author ~= "" and author or "Unknown Author"), 100)
+            local title, author = book_title_author()
 
             if send_mode == MODE_WIKI then
                 run_wiki_batch(to_do, title, author)
@@ -614,7 +716,7 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
             local check = is_carded and "✓ " or (sel[entry.key] and "☑ " or "☐ ")
             return check .. entry.label
         end,
-        on_delete_selected = function(picked)
+        on_delete_selected = (book_ctx and book_ctx.is_current) and function(picked)
             for _i, entry in ipairs(picked) do
                 CardStorage.delete_by_phrase(entry.data.text)
             end
@@ -630,8 +732,8 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
                     ui.highlight:deleteHighlight(idx)
                 end
             end
-        end,
-        after_delete = hard_rebuild,
+        end or nil,
+        after_delete = (book_ctx and book_ctx.is_current) and hard_rebuild or nil,
         delete_selected_label = _("Delete Selected Highlights"),
         delete_selected_confirm = _("Remove selected highlight(s) from this book?\n\n")
             .. _("Saved AnkiKOAi cards for those phrases will also be deleted."),
@@ -645,9 +747,13 @@ local function show_menu(ui, config, highlights, already_carded, selected, inbox
 
     local total_label = tostring(#highlights) .. _(" highlight(s)")
     local title_prefix = inbox_opts.title_prefix or _("Highlights to Anki")
+    local menu_title = title_prefix
+    if book_ctx and book_ctx.title then
+        menu_title = title_prefix .. " — " .. book_ctx.title
+    end
     Nav.prepend_back(items, nil, menu_ref, back_label)
     local m = Nav.wrap_menu(Menu:new(Nav.apply_compact_menu {
-        title      = title_prefix .. "  (" .. total_label .. ")",
+        title      = menu_title .. "  (" .. total_label .. ")",
         item_table = items,
     }), function()
         if guard.busy then return end
@@ -660,9 +766,15 @@ end
 -- Public entry point. Call with self.ui and CONFIGURATION from main.lua.
 function HighlightInbox.show(ui, config, inbox_opts)
     inbox_opts = inbox_opts or {}
-    local highlights = build_highlights(ui)
+    local book_ctx = HighlightBooks.make_book_ctx(inbox_opts.book_path, ui)
+    if not book_ctx then
+        HighlightInbox.notify_empty()
+        return
+    end
+    local highlights = build_highlights(ui, book_ctx)
+    local other_books = HighlightBooks.discover_books_with_highlights(book_ctx.path, ui)
 
-    if #highlights == 0 then
+    if #highlights == 0 and #other_books == 0 then
         HighlightInbox.notify_empty()
         return
     end
@@ -670,7 +782,7 @@ function HighlightInbox.show(ui, config, inbox_opts)
     local already_carded = load_already_carded()
     local selected = default_selected(highlights, already_carded, MODE_WIKI)
 
-    show_menu(ui, config, highlights, already_carded, selected, inbox_opts, MODE_WIKI)
+    show_menu(ui, config, highlights, already_carded, selected, inbox_opts, MODE_WIKI, book_ctx)
 end
 
 return HighlightInbox

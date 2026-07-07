@@ -7,6 +7,8 @@ Guides for setting up Anki decks that match this plugin, configuring KOReader, a
 | Guide | What it covers |
 |-------|----------------|
 | [Getting started](getting-started.md) | Install plugin → set up Anki → first card in ~15 minutes |
+| [WebDAV setup (Windows)](webdav-setup-windows.md) | Local WebDAV for [Tag Bank Highlight Sync](https://github.com/3gnome/tagbankhighlightsync.koplugin) on home Wi‑Fi |
+| [Tag Bank companion](tag-bank-companion.md) | Optional tags, JSON sync, Obsidian quote library |
 | [Plugin configuration](plugin-configuration.md) | API keys, Card defaults, one-tap send, AnkiConnect, memorization behavior |
 | [Anki: Wiki Card setup](anki-vocabulary.md) | **Wiki Card** note type (AI + wiki), templates, CSS, deck options |
 | [Anki: Vocabulary Card setup](anki-vocabulary-card.md) | **Vocabulary Card** note type (dictionary only, no AI) |

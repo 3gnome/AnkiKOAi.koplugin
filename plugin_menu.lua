@@ -175,10 +175,6 @@ function PluginMenu.show(hl, ctx, ui, config, actions)
                 })
                 return
             end
-            if not HighlightInbox.has_highlights(ui) then
-                HighlightInbox.notify_empty()
-                return
-            end
             open_child(function()
                 HighlightInbox.show(ui, config, {
                     on_back      = reopen_hub,

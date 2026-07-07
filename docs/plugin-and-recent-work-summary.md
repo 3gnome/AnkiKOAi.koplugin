@@ -43,7 +43,7 @@ flowchart LR
 
 ## Companion: TagBankHighlightSync
 
-Not part of AnkiKOAi itself, but used alongside it in a typical setup (`tagbankhighlightsync.koplugin` sibling repo):
+Not part of AnkiKOAi itself, but used alongside it in a typical setup ([`tagbankhighlightsync.koplugin`](https://github.com/3gnome/tagbankhighlightsync.koplugin) sibling repo):
 
 - Tags highlights, syncs `*.sdr.json` to WebDAV, exports Obsidian library (`library/quotes/`, `tags/`, `books/`)
 - When **both** plugins are installed, TagBank settings use Anki-branded labels for orange/green filters; alone, labels stay neutral (`plugin_peers.lua` in TagBank repo)
@@ -67,11 +67,13 @@ Obsidian export is **one-way** (KOReader → WebDAV → markdown). Delete-in-Obs
 
 ### AnkiKOAi
 
-1. **View All Highlights** — direct entry on the highlight menu and in the AnkiKOAi hub; opens [`highlight_inbox.lua`](../highlight_inbox.lua) checklist (select + delete + batch Anki send). Files: [`main.lua`](../main.lua), [`plugin_menu.lua`](../plugin_menu.lua), [`plugin_constants.lua`](../plugin_constants.lua).
+1. **View All Highlights** — highlight menu and AnkiKOAi hub; **Switch book…**, **Sync All Highlights** (Tag Bank), live annotation discovery, delete + batch Anki send. Files: [`highlight_inbox.lua`](../highlight_inbox.lua), [`highlight_books.lua`](../highlight_books.lua), [`plugin_peers.lua`](../plugin_peers.lua).
 
-2. **Alice reset tooling** — [`scripts/reset_alice.sh`](../scripts/reset_alice.sh) orchestrates PC-only clean slate: Anki notes, local card queue, epub/sidecars, WebDAV JSON, Obsidian library purge, regen, fresh epub download.
+2. **Tag Bank companion docs** — [`docs/tag-bank-companion.md`](tag-bank-companion.md), [`docs/webdav-setup-windows.md`](webdav-setup-windows.md). Tag Bank repo: [tagbankhighlightsync.koplugin](https://github.com/3gnome/tagbankhighlightsync.koplugin).
 
-3. **Highlight cleanup** — [`highlight_cleanup.lua`](../highlight_cleanup.lua) removes orphan orange vocab/mem highlights after background Anki send (with spec).
+3. **Alice reset tooling** — [`scripts/reset_alice.sh`](../scripts/reset_alice.sh) orchestrates PC-only clean slate: Anki notes, local card queue, epub/sidecars, WebDAV JSON, Obsidian library purge, regen, fresh epub download.
+
+4. **Highlight cleanup** — [`highlight_cleanup.lua`](../highlight_cleanup.lua) removes orphan orange vocab/mem highlights after background Anki send (with spec).
 
 ### TagBankHighlightSync
 
