@@ -1,11 +1,22 @@
-## Privacy scrub (v1.1.1)
+## What's new in v1.1.1
 
-Removes developer machine paths and LAN IPs from release zips. No functional changes from v1.1.0.
+### View All Highlights — multi-book
+- **Switch book…** — browse highlights from any book in reading history (sidecar or live annotations on the open book)
+- **Sync All Highlights** — when [Tag Bank Highlight Sync](https://github.com/3gnome/tagbankhighlightsync.koplugin) is installed, sync all books in history to cloud in one action
+- Live annotation discovery — new highlights count before sidecar flush; highlight menu button always visible
+- Non-open books: view + batch Anki send from sidecar; delete only on the open book
 
-**Use this release instead of v1.1.0** — earlier zip assets contained local dev paths in helper scripts and docs.
+### Peer plugin detection
+- `plugin_peers.lua` — correct Tag Bank detection (`TagBankHighlightSync` plugin id)
+
+### Docs
+- [WebDAV setup (Windows)](docs/webdav-setup-windows.md) — local WebDAV for Tag Bank / quote library
+- Updated getting started, plugin configuration, and in-app help for View All Highlights
 
 ## Install
 
 Download `AnkiKOAi-v1.1.1.zip`, unzip, and copy the `AnkiKOAi.koplugin` folder into your KOReader `plugins/` directory.
 
 See [Getting started](https://github.com/3gnome/AnkiKOAi.koplugin/blob/main/docs/getting-started.md) for setup.
+
+**Optional companion:** [Tag Bank Highlight Sync](https://github.com/3gnome/tagbankhighlightsync.koplugin) for tags, JSON sync, and Obsidian quote library.

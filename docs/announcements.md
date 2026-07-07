@@ -33,7 +33,7 @@ you can use multiple providers (DashScope, Gemini, OpenAI, OpenRouter).
 
 Repo + setup guide: LINK
 
-Feedback and bug reports welcome — latest release: v1.1.0.
+Feedback and bug reports welcome — latest release: v1.1.1.
 
 Optional companion for tags + Obsidian quote library:
 https://github.com/3gnome/tagbankhighlightsync.koplugin
