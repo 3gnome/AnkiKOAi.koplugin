@@ -197,8 +197,8 @@ Details: [docs/plugin-configuration.md](docs/plugin-configuration.md). In Settin
 bash dev-start.sh --emulator alice.epub
 
 # One-time WebDAV + cloud plugin setup (TagBankHighlightSync repo):
-# bash /mnt/c/Users/small/tagbankhighlightsync.koplugin/setup-emulator-cloud.sh
-# bash /mnt/c/Users/small/tagbankhighlightsync.koplugin/configure-emulator-webdav.sh
+# bash /path/to/tagbankhighlightsync.koplugin/setup-emulator-cloud.sh
+# bash /path/to/tagbankhighlightsync.koplugin/configure-emulator-webdav.sh
 
 # Sync without launching (then launch once manually or via dev-start.sh without --sync-only)
 bash dev-start.sh --sync-only
@@ -213,7 +213,7 @@ Set `KOREADER_DIR` if your emulator is not at `~/koreader-dev/emulator/usr/lib/k
 On WSL, avoid two full emulator launches per session — a second launch often triggers WSLg
 `[WARN: COPY MODE]` in the taskbar (not in terminal logs). AppImage from WSL still uses WSLg.
 
-For Cursor / local AI context: copy `LOCAL_DEV.md.sample` → `LOCAL_DEV.md` (gitignored). Open the 3-folder workspace: **Ctrl+Shift+N** → **Ctrl+Shift+P** → **Open Workspace from File...** → `C:\Users\small\koreader-dev.code-workspace` (Glass/Agents cannot open `.code-workspace`; use the Editor). Or: `cursor C:\Users\small\koreader-dev.code-workspace --classic`. Attach `@LOCAL_DEV.md` in chat anytime.
+For Cursor / local AI context: copy `LOCAL_DEV.md.sample` → `LOCAL_DEV.md` (gitignored) and edit paths for your machine. Attach `@LOCAL_DEV.md` in chat anytime.
 
 ## About this plugin
 

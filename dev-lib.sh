@@ -2,8 +2,9 @@
 # Sets: KOREADER, ANKIKOOAI_*, TAGBANKHIGHLIGHTSYNC_* (HIGHLIGHTSYNC_* kept as legacy aliases)
 
 : "${KOREADER:="${KOREADER_DIR:-$HOME/koreader-dev/emulator/usr/lib/koreader}"}"
-: "${ANKIKOOAI_SRC:="/mnt/c/Users/small/AnkiKOAi.koplugin"}"
-: "${TAGBANKHIGHLIGHTSYNC_SRC:="/mnt/c/Users/small/tagbankhighlightsync.koplugin"}"
+_DEV_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
+: "${ANKIKOOAI_SRC:="${_DEV_LIB_DIR:-.}"}"
+: "${TAGBANKHIGHLIGHTSYNC_SRC:="$(dirname "${ANKIKOOAI_SRC}")/tagbankhighlightsync.koplugin"}"
 : "${ANKIKOOAI_DST:="$HOME/koreader-dev/plugins/AnkiKOAi.koplugin"}"
 : "${TAGBANKHIGHLIGHTSYNC_DST:="$HOME/koreader-dev/plugins/tagbankhighlightsync.koplugin"}"
 # Legacy env names (still accepted)

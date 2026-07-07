@@ -1,15 +1,22 @@
 #!/bin/bash
 # Reset Alice to clean copy (PC only). Run from WSL:
-#   bash /mnt/c/Users/small/AnkiKOAi.koplugin/scripts/reset_alice.sh
+#   bash scripts/reset_alice.sh
+#
+# Set paths via environment (edit in LOCAL_DEV.md or export before running):
+#   WEBDAV_ROOT  WebDAV / Obsidian root
+#   ANKI_REPO    This plugin directory (default: repo root)
+#   TAGBANK_REPO Tag Bank plugin directory
+#   DESKTOP_KO   Optional desktop KOReader tree
 
 set -euo pipefail
 
-WEBDAV="/mnt/c/Users/small/Desktop/KOReader Highlights"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ANKI_REPO="${ANKI_REPO:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+WEBDAV="${WEBDAV_ROOT:?Set WEBDAV_ROOT to your WebDAV/Obsidian root}"
 LIBRARY="$WEBDAV/library"
-ANKI_REPO="/mnt/c/Users/small/AnkiKOAi.koplugin"
-DESKTOP_KO="/mnt/c/Users/small/Desktop/koreader"
+DESKTOP_KO="${DESKTOP_KO:-}"
 EMULATOR_KO="$HOME/koreader-dev/emulator/usr/lib/koreader"
-TAGBANK="/mnt/c/Users/small/tagbankhighlightsync.koplugin"
+TAGBANK="${TAGBANK_REPO:-$(dirname "$ANKI_REPO")/tagbankhighlightsync.koplugin}"
 LJ="$EMULATOR_KO/luajit"
 
 echo "=== 1. AnkiConnect: delete Alice notes (if Anki running) ==="

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Add a second dev book (Wizard of Oz) with sidecar highlights for View All Highlights testing.
-#   bash /mnt/c/Users/small/AnkiKOAi.koplugin/scripts/setup_second_book.sh
+#   bash scripts/setup_second_book.sh
 
 set -euo pipefail
 
-REPO="/mnt/c/Users/small/AnkiKOAi.koplugin"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EMU="$HOME/koreader-dev/emulator/usr/lib/koreader"
 BOOK="wizard-of-oz.epub"
 PATH_EPUB="$REPO/$BOOK"
@@ -16,8 +16,7 @@ ls -la "$PATH_EPUB"
 echo "=== Create sidecar with sample highlights ==="
 SDR="$REPO/wizard-of-oz.sdr"
 mkdir -p "$SDR"
-cat > "$SDR/metadata.epub.lua" <<'LUA'
--- /mnt/c/Users/small/AnkiKOAi.koplugin/wizard-of-oz.sdr/metadata.epub.lua
+cat > "$SDR/metadata.epub.lua" <<LUA
 return {
     ["annotations"] = {
         [1] = {
@@ -43,7 +42,7 @@ return {
             ["text"] = "Their house was small, for the lumber to build it had to be carried by wagon many miles.",
         },
     },
-    ["doc_path"] = "/mnt/c/Users/small/AnkiKOAi.koplugin/wizard-of-oz.epub",
+    ["doc_path"] = "$PATH_EPUB",
     ["doc_props"] = {
         ["authors"] = "L. Frank Baum",
         ["title"] = "The Wonderful Wizard of Oz",

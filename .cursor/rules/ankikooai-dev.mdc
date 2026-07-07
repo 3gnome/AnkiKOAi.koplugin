@@ -20,7 +20,7 @@ The user may also attach **`@LOCAL_DEV.md`** explicitly.
 **Cross-repo:** If the task touches sync, tags, quote library, or WebDAV, also skim TagBank
 `LOCAL_DEV.md.sample` § Quote library validation and Cloud folder.
 
-**Workspace:** `C:\Users\small\koreader-dev.code-workspace` — open in **Editor** (**Ctrl+Shift+N**), then **Open Workspace from File...** (Glass/Agents cannot load `.code-workspace`). Both plugins in `C:\Users\small\`.
+**Workspace:** Open a multi-root `koreader-dev.code-workspace` in **Editor** (**Ctrl+Shift+N**), then **Open Workspace from File...** (Glass/Agents cannot load `.code-workspace`). Sibling plugin repos in one parent folder.
 
 ## Quick reminders
 

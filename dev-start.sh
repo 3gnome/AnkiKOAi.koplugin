@@ -46,7 +46,7 @@ ENVIRONMENT
 EXAMPLES
   bash dev-start.sh --sync-only
   bash dev-start.sh --emulator alice.epub
-  bash dev-start.sh --emulator /mnt/c/Users/small/AnkiKOAi.koplugin/alice.epub
+  bash dev-start.sh --emulator /path/to/alice.epub
   bash dev-start.sh --setup-cloud --emulator alice.epub
 EOF
 }
